@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "PowerShell(node --version; npm --version; Write-Output \"---\"; \\(Get-Command node -ErrorAction SilentlyContinue\\).Source)"
+    ]
+  }
+}

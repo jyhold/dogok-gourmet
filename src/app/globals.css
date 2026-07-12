@@ -1,0 +1,631 @@
+/* ── 점심 룰렛 · Tiny Town 도트 디자인 시스템 (기획서 §3.4) ── */
+
+:root {
+  /* 따뜻한 파스텔 팔레트 + 굵은 픽셀 아웃라인 */
+  --cream: #f5edda;
+  --cream-2: #ece0c4;
+  --ink: #3a2e2a;
+  --ink-soft: #6b5a52;
+  --tomato: #e5654e;
+  --tomato-dark: #c24a37;
+  --mustard: #f2b134;
+  --leaf: #7fb069;
+  --leaf-dark: #5d8f4c;
+  --sky: #6cb4d9;
+  --sky-dark: #4a90b8;
+  --crown: #f2c14e;
+  --paper: #fffaf0;
+  --shadow: #241a17;
+
+  /* 픽셀 단위 (정수배 스케일 기준) */
+  --px: 4px;
+
+  --font-pixel-ko: 'Galmuri11', 'Neo둥근모', monospace;
+  --font-pixel-en: 'Press Start 2P', monospace;
+  --font-body: 'Pretendard', -apple-system, 'Malgun Gothic', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--cream);
+  /* 도트 마을 배경: 은은한 체크 타일 */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: none;
+  image-rendering: pixelated;
+}
+
+img,
+canvas {
+  image-rendering: pixelated;
+}
+
+/* ── 도트 아이콘 (16×16 정수배 확대) ── */
+.dot-icon {
+  image-rendering: pixelated;
+  display: inline-block;
+  flex-shrink: 0;
+}
+/* 어두운 슬롯 릴 배경 위에서 아웃라인이 묻히지 않게 밝은 도트 타일 */
+.dot-icon-tile {
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  padding: 5px;
+  box-shadow: 0 3px 0 0 var(--shadow);
+}
+
+h1,
+h2,
+h3,
+.pixel,
+button {
+  font-family: var(--font-pixel-ko);
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+}
+
+.pixel-en {
+  font-family: var(--font-pixel-en);
+}
+
+/* ── 9-patch 픽셀 프레임 (box-shadow 테크닉, 이미지 0) ── */
+.frame {
+  position: relative;
+  background: var(--paper);
+  border: var(--px) solid var(--ink);
+  box-shadow:
+    0 var(--px) 0 0 var(--shadow),
+    inset 0 0 0 var(--px) var(--paper),
+    inset 0 0 0 calc(var(--px) * 2) rgba(0, 0, 0, 0.06);
+  image-rendering: pixelated;
+}
+
+/* 모서리 도트 (픽셀 코너 효과) */
+.frame::before,
+.frame::after {
+  content: '';
+  position: absolute;
+  width: var(--px);
+  height: var(--px);
+  background: var(--ink);
+}
+.frame::before {
+  top: calc(var(--px) * -1);
+  left: calc(var(--px) * -1);
+}
+.frame::after {
+  top: calc(var(--px) * -1);
+  right: calc(var(--px) * -1);
+}
+
+/* ── 픽셀 버튼 ── */
+.btn {
+  font-family: var(--font-pixel-ko);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--mustard);
+  border: var(--px) solid var(--ink);
+  padding: 12px 18px;
+  cursor: pointer;
+  box-shadow: 0 var(--px) 0 0 var(--shadow);
+  transition: transform 0.05s steps(1), box-shadow 0.05s steps(1);
+  image-rendering: pixelated;
+  user-select: none;
+}
+.btn:hover {
+  filter: brightness(1.05);
+}
+.btn:active {
+  transform: translateY(var(--px));
+  box-shadow: 0 0 0 0 var(--shadow);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--tomato);
+  color: var(--paper);
+}
+.btn-lg {
+  font-size: 20px;
+  padding: 18px 28px;
+}
+.btn-ghost {
+  background: var(--paper);
+}
+.btn-selected {
+  background: var(--leaf);
+  color: var(--paper);
+}
+
+/* ── 칩 (예산/거리/카테고리 토글) ── */
+.chip {
+  font-family: var(--font-pixel-ko);
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  box-shadow: 0 3px 0 0 var(--shadow);
+  transition: transform 0.05s steps(1), box-shadow 0.05s steps(1);
+}
+.chip:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 0 var(--shadow);
+}
+.chip[aria-pressed='true'] {
+  background: var(--leaf);
+  color: var(--paper);
+}
+.chip.excluded[aria-pressed='true'] {
+  background: var(--tomato);
+  color: var(--paper);
+}
+
+/* ── 체크박스 행 (미식가 인증 우선 등) ── */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 0 3px 0 0 var(--shadow);
+  padding: 10px 12px;
+  margin: 4px 0 6px;
+  cursor: pointer;
+}
+.check-row[aria-checked='true'] {
+  background: var(--crown);
+}
+.check-box {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  font-family: var(--font-pixel-ko);
+  font-size: 14px;
+  color: var(--tomato-dark);
+}
+.check-text {
+  font-family: var(--font-pixel-ko);
+  font-size: 14px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.check-desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.check-row[aria-checked='true'] .check-desc {
+  color: var(--ink);
+}
+
+/* ── 배지 ── */
+.badge-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-pixel-ko);
+  font-size: 12px;
+  background: var(--crown);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  padding: 3px 8px;
+  box-shadow: 0 3px 0 0 var(--shadow);
+}
+
+/* ── 레이아웃 ── */
+.stage {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.title-bar {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.title-bar h1 {
+  font-size: 26px;
+  margin: 0;
+  color: var(--tomato-dark);
+  text-shadow: 2px 2px 0 var(--mustard);
+}
+.title-bar p {
+  font-family: var(--font-body);
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+.section-label {
+  font-family: var(--font-pixel-ko);
+  font-size: 14px;
+  margin: 18px 0 10px;
+  color: var(--ink);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── 모드 선택 카드 ── */
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+}
+.mode-card .emoji {
+  font-size: 38px;
+  line-height: 1;
+  filter: saturate(1.1);
+}
+.mode-card .mode-name {
+  font-family: var(--font-pixel-ko);
+  font-size: 15px;
+}
+.mode-card .mode-desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.mode-card:active {
+  transform: translateY(var(--px));
+}
+
+.tab-row {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border: var(--px) solid var(--ink);
+  box-shadow: 0 var(--px) 0 0 var(--shadow);
+}
+.tab {
+  flex: 1;
+  font-family: var(--font-pixel-ko);
+  font-size: 16px;
+  padding: 12px;
+  background: var(--paper);
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.tab[aria-selected='true'] {
+  background: var(--sky);
+  color: var(--paper);
+}
+
+/* ── 슬롯머신 ── */
+.slot-machine {
+  padding: 20px;
+  margin: 16px 0;
+  background: linear-gradient(180deg, var(--tomato) 0%, var(--tomato-dark) 100%);
+}
+.slot-window {
+  height: 92px;
+  overflow: hidden;
+  background: var(--ink);
+  border: var(--px) solid var(--shadow);
+  position: relative;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+.slot-reel {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+.slot-cell {
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--paper);
+}
+.slot-cell .icon {
+  font-size: 44px;
+  line-height: 1;
+}
+.slot-cell .name {
+  font-family: var(--font-pixel-ko);
+  font-size: 18px;
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* 당첨선 */
+.slot-window::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--mustard);
+  opacity: 0.5;
+  transform: translateY(-1px);
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.6) rotate(90deg); opacity: 0; }
+}
+.sparkle {
+  position: absolute;
+  font-size: 22px;
+  animation: sparkle 0.6s steps(4) forwards;
+  pointer-events: none;
+}
+
+/* ── 결과 카드 ── */
+.result-card {
+  padding: 22px;
+  margin: 16px 0;
+  animation: pop 0.3s steps(3);
+}
+@keyframes pop {
+  0% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.result-card .cat {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.result-card h2 {
+  font-size: 24px;
+  margin: 4px 0 10px;
+  color: var(--ink);
+}
+.result-card .menu {
+  font-family: var(--font-body);
+  font-size: 15px;
+  margin: 4px 0;
+}
+.result-card .comment {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--cream);
+  border-left: var(--px) solid var(--mustard);
+  padding: 8px 10px;
+  margin: 10px 0;
+}
+.meta-line {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  margin: 8px 0;
+}
+.meta-line b {
+  color: var(--tomato-dark);
+}
+
+/* ── 미식가 평점 슬롯 ── */
+.rating-slot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  box-shadow: 0 3px 0 0 var(--shadow);
+}
+.rating-label {
+  font-family: var(--font-pixel-ko);
+  font-size: 13px;
+  color: var(--ink);
+}
+.stars {
+  display: inline-flex;
+  line-height: 1;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+.star {
+  position: relative;
+  display: inline-block;
+  color: var(--cream-2); /* 빈 별 (회색빛) */
+}
+.star-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--crown); /* 채운 별 (골드) */
+}
+.rating-num {
+  font-size: 11px;
+  color: var(--tomato-dark);
+}
+.visited-badge {
+  font-family: var(--font-pixel-ko);
+  font-size: 11px;
+  background: var(--leaf);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 2px 7px;
+  margin-left: auto;
+}
+
+/* ── 토스트 ── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: 90%;
+  padding: 12px 16px;
+  background: var(--sky-dark);
+  color: var(--paper);
+  font-family: var(--font-pixel-ko);
+  font-size: 13px;
+  border: 3px solid var(--ink);
+  box-shadow: 0 var(--px) 0 0 var(--shadow);
+  z-index: 50;
+  animation: slideUp 0.3s steps(4);
+}
+@keyframes slideUp {
+  0% { transform: translate(-50%, 20px); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+.toast.warn { background: var(--tomato-dark); }
+
+/* ── 마스코트 / 빈 상태 ── */
+.mascot {
+  text-align: center;
+  padding: 30px 0;
+}
+.mascot .face {
+  font-size: 54px;
+}
+.mascot p {
+  font-family: var(--font-pixel-ko);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+/* 마스코트 스프라이트 */
+.mascot-sprite {
+  image-rendering: pixelated;
+  display: block;
+  margin: 0 auto;
+}
+@keyframes dot-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.mascot-bounce {
+  animation: dot-bounce 0.7s steps(3, end) infinite;
+}
+/* 인사 말풍선 (모드 화면 greeter / 하단 씬) */
+.greeter,
+.mascot-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+/* 하단 마스코트 씬: 모드 카드 아래 빈 공간 채움 */
+.mascot-scene {
+  margin-top: 28px;
+}
+.speech {
+  font-family: var(--font-pixel-ko);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  padding: 6px 12px;
+  box-shadow: 0 3px 0 0 var(--shadow);
+  position: relative;
+}
+.speech::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: var(--paper);
+  border-right: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+}
+/* 하단 씬 큰 말풍선 (날씨 + 추천 2줄) */
+.speech-lg {
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.9;
+  max-width: 300px;
+  padding: 10px 16px;
+}
+.rec-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.rec-line b {
+  color: var(--tomato-dark);
+}
+.rec-line .dot-icon {
+  vertical-align: middle;
+}
+/* 토스트 안 마스코트 */
+.toast-mascot {
+  image-rendering: pixelated;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.toast-row {
+  display: flex;
+  align-items: center;
+}
+
+.hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 8px;
+}
+
+.back-link {
+  font-family: var(--font-pixel-ko);
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--sky-dark);
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
