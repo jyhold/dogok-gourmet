@@ -28,7 +28,7 @@
 
 ## 코드 지도
 - `src/lib/types.ts` 도메인 타입 (Restaurant/Candidate/모드/거리)
-- `src/lib/categories.ts` 2단계 카테고리 24종 + 카카오 매핑(세부→대분류→기타) + 예산추정 + 혼밥휴리스틱
+- `src/lib/categories.ts` 2단계 카테고리 25종(일식 장어요리 포함) + 카카오 매핑(세부→대분류→기타) + 예산추정 + 혼밥휴리스틱
 - `src/lib/geo.ts` 하버사인×1.3 보정, 서비스 바운딩박스, 행정구역 필터, 회사좌표 fallback
 - `src/lib/sheet.ts` `src/lib/kakao.ts` `src/lib/weather.ts` 외부 소스 로더 (mock 폴백 내장)
 - `src/lib/candidates.ts` ★ 모드별 후보구성 + 중복병합(이름+50m, DB우선) + 가중치

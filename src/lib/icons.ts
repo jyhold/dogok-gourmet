@@ -17,6 +17,7 @@ const SUB_SLUG: Record<string, string> = {
   '라멘·우동': 'ramen',
   '돈카츠·카레': 'katsu',
   '덮밥': 'donburi',
+  '장어요리': 'eel',
   '파스타·피자': 'pizza',
   '버거': 'burger',
   '스테이크·비스트로': 'steak',
