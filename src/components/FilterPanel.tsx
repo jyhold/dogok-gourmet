@@ -19,7 +19,7 @@ interface Props {
 
 const PRICE_OPTIONS: { tier: PriceTier; label: string }[] = [
   { tier: '가성비', label: '가성비 ~1만' },
-  { tier: '맛집', label: '맛집 2~3만' },
+  { tier: '보통', label: '보통 2~3만' },
   { tier: '플렉스', label: '플렉스 3만~' },
 ];
 

@@ -6,7 +6,7 @@ export type Mode = 'lunch-solo' | 'lunch-group' | 'dinner-flash' | 'dinner-team'
 export type MealType = '점심' | '저녁' | '둘다';
 
 /** 예산 등급. '회식' = 인당 5만+α */
-export type PriceTier = '가성비' | '맛집' | '플렉스' | '회식';
+export type PriceTier = '가성비' | '보통' | '플렉스' | '회식';
 
 /** 거리 필터 (이동수단) */
 export type DistanceMode = 'walk' | 'bike' | 'taxi';

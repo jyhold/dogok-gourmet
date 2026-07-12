@@ -34,7 +34,7 @@ function clampRating(v: number | undefined): number | undefined {
   return Math.max(0, Math.min(10, Math.round(v)));
 }
 
-const PRICE_TIERS: PriceTier[] = ['가성비', '맛집', '플렉스', '회식'];
+const PRICE_TIERS: PriceTier[] = ['가성비', '보통', '플렉스', '회식'];
 const MEAL_TYPES: MealType[] = ['점심', '저녁', '둘다'];
 
 /** CSV 한 행 → Restaurant. 필수값 누락·형식 오류 행은 null 반환(건너뜀). */
@@ -54,7 +54,7 @@ function rowToRestaurant(row: Record<string, string>): Restaurant | null {
   // 좌표 없으면 Phase 1에서는 건너뜀 (지오코딩은 Phase 2에서 채움)
   if (lat == null || lng == null) return null;
 
-  const priceTier = PRICE_TIERS.includes(priceTierRaw) ? priceTierRaw : '맛집';
+  const priceTier = PRICE_TIERS.includes(priceTierRaw) ? priceTierRaw : '보통';
   const mealRaw = row.meal_type?.trim() as MealType;
   const mealType = MEAL_TYPES.includes(mealRaw) ? mealRaw : '둘다';
 
