@@ -443,6 +443,34 @@ button {
   color: var(--tomato-dark);
 }
 
+/* ── 시그니처 메뉴 슬롯 (결과 카드 기본 노출) ── */
+.menu-slot {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-left: 7px solid var(--tomato);
+  box-shadow: 0 3px 0 0 var(--shadow);
+}
+.menu-slot-label {
+  font-family: var(--font-pixel-ko);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 3px;
+}
+.menu-slot-val {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.menu-slot-empty {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 /* ── 미식가 평점 슬롯 ── */
 .rating-slot {
   display: flex;

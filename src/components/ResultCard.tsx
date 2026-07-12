@@ -10,9 +10,9 @@ interface Props {
   canReroll: boolean;
 }
 
-function kakaoMapUrl(c: Candidate): string {
-  if (c.kakaoPlaceUrl) return c.kakaoPlaceUrl;
-  return `https://map.kakao.com/link/search/${encodeURIComponent(c.name)}`;
+/** 네이버지도에서 상호 검색 (모바일은 네이버지도 앱 연결 유도) */
+function naverMapUrl(c: Candidate): string {
+  return `https://map.naver.com/p/search/${encodeURIComponent(c.name)}`;
 }
 
 /** 미식가 평점(0~10) → 별 5개. 채움 = clamp(rating/2 - i, 0, 1) → 반개 지원. */
@@ -41,24 +41,15 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
 
   return (
     <div className="result-card frame">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <DotIcon sub={c.categorySub} size={44} />
-          <div>
-            <div className="cat">
-              {c.categoryMain} · {c.categorySub}
-            </div>
-            <h2>{c.name}</h2>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <DotIcon sub={c.categorySub} size={44} />
+        <div>
+          <div className="cat">
+            {c.categoryMain} · {c.categorySub}
           </div>
+          <h2>{c.name}</h2>
         </div>
-        {c.curated && <span className="badge-crown">👑 추천</span>}
       </div>
-
-      {c.signatureMenu && (
-        <div className="menu">
-          🍽️ <b>{c.signatureMenu}</b>
-        </div>
-      )}
 
       <div className="meta-line">
         <span>
@@ -85,6 +76,15 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
 
       {c.comment && <div className="comment">💬 {c.comment}</div>}
 
+      <div className="menu-slot">
+        <div className="menu-slot-label">🍽️ 시그니처 메뉴</div>
+        {c.signatureMenu ? (
+          <div className="menu-slot-val">{c.signatureMenu}</div>
+        ) : (
+          <div className="menu-slot-empty">메뉴 정보 준비 중이에요</div>
+        )}
+      </div>
+
       {c.rating != null && (
         <div className="rating-slot">
           <span className="rating-label">⭐ 미식가 평점</span>
@@ -105,8 +105,8 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
             ☎ {c.phone}
           </span>
         )}
-        <a className="btn btn-ghost" href={kakaoMapUrl(c)} target="_blank" rel="noreferrer">
-          카카오맵에서 보기
+        <a className="btn btn-ghost" href={naverMapUrl(c)} target="_blank" rel="noreferrer">
+          네이버지도에서 보기
         </a>
       </div>
 

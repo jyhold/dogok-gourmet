@@ -1,5 +1,13 @@
 # 진행 상황 (세션 인수인계)
 
+## 🚀 Phase 3 — 배포 완료 (2026-07-12)
+- **라이브: https://dogok-gourmet.vercel.app** (Vercel, GitHub 연동 자동배포, 서울 ICN1 엣지, HTTPS).
+- git: `main` 브랜치. 코드 수정→`git push`→자동 재배포. 시트 수정은 재배포 불필요(10분 캐시).
+- 프로덕션 검증: 홈 200 / 시트 218곳(실데이터) / 기상청 실기온 / nearby 204 / 점심 기타 0.
+- 환경변수 Vercel 등록: KAKAO_REST_KEY, KMA_SERVICE_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_TAB, USE_MOCK=FALSE.
+- 배포 가이드: `docs/deploy-guide.md`. 비밀키는 `.gitignore`/`.vercelignore`로 저장소·업로드 제외.
+- 남은 선택: 커스텀 도메인(연 1~2만원), 카카오맵 지도 임베드 시 Vercel 도메인 플랫폼 등록.
+
 ## 🔄 v1.10 변경 (2026-07-12)
 - **미식가 방문 검증 + 주관적 평점** — 시트 R열 `visited`(TRUE/FALSE), S열 `rating`(0~10 정수). `types.ts`·`sheet.ts`(clampRating)·`mockData`·`candidates`·`ResultCard`(StarRating, rating÷2=별5, 반개) 반영. 결과 카드 하단 별점 슬롯 + '✅ 직접 방문 인증' 배지 (rating 있을 때만, 카카오 결과는 미표시).
 - **'⭐ 미식가 인증 맛집 우선' 체크박스** — FilterPanel 최상단. 켜면 `boostVisited`(roulette.ts)로 visited 후보 가중치 ×6 (확률 부스트). localStorage 저장. 테스트 2개 추가(총 14).
