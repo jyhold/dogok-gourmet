@@ -1,5 +1,12 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔁 시트 자동 동기화 (카카오 신규 → 관리자DB) — 코드 완료, 세팅 대기
+- `/api/sync`(Vercel Cron 매일 정오 KST) → 카카오 검색 → 시트에 없는 신규만 필터 → Apps Script 웹훅으로 append.
+- 코드: `src/lib/classify.ts`(필터·행생성 공용), `src/lib/sheetSync.ts`, `src/app/api/sync/route.ts`, `vercel.json`(cron).
+- 필터/중복: 시드와 동일(카페 제외·치킨호프=저녁, 이름+50m 중복 제거).
+- **사용자 세팅 필요**: `docs/sheet-sync-setup.md` — Apps Script 웹훅 배포 + Vercel env(`SHEET_WEBHOOK_URL`/`SHEET_WEBHOOK_SECRET`/`CRON_SECRET`).
+- 수동 테스트: `/api/sync?key=<CRON_SECRET>`. 미설정 시 안전하게 no-op(에러 JSON).
+
 ## 🚀 Phase 3 — 배포 완료 (2026-07-12)
 - **라이브: https://dogok-gourmet.vercel.app** (Vercel, GitHub 연동 자동배포, 서울 ICN1 엣지, HTTPS).
 - git: `main` 브랜치. 코드 수정→`git push`→자동 재배포. 시트 수정은 재배포 불필요(10분 캐시).
