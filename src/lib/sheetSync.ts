@@ -19,6 +19,36 @@ function normName(s: string): string {
 }
 
 /**
+ * 웹훅 쓰기 경로 점검용 — 표시용 테스트 행 1개를 시트에 append.
+ * active=FALSE라 앱 룰렛엔 안 나옴. 확인 후 시트에서 그 행만 삭제하면 됨.
+ */
+export async function pingWebhook(): Promise<{ ok: boolean; added?: number; error?: string }> {
+  const url = process.env.SHEET_WEBHOOK_URL;
+  const secret = process.env.SHEET_WEBHOOK_SECRET;
+  if (!url || !secret) return { ok: false, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
+
+  // 19열 (헤더 순서). active=FALSE → 앱에 미노출. 눈에 띄게 name에 표식.
+  const testRow = [
+    '__동기화_테스트__', '기타', '기타', '', '보통', '',
+    '웹훅 테스트 행 — 확인 후 삭제하세요', '37.4891', '127.0529', '',
+    'FALSE', '1', '둘다', 'FALSE', '', '', 'FALSE', 'FALSE', '',
+  ];
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, rows: [testRow] }),
+    });
+    if (!res.ok) return { ok: false, error: `웹훅 ${res.status}` };
+    const j = (await res.json().catch(() => ({}))) as { added?: number; error?: string };
+    if (j.error) return { ok: false, error: `웹훅 응답: ${j.error}` };
+    return { ok: true, added: j.added ?? 1 };
+  } catch (err) {
+    return { ok: false, error: `웹훅 호출 실패: ${(err as Error).message}` };
+  }
+}
+
+/**
  * 카카오 반경 검색 → 시트에 없는(중복 아닌) 신규만 골라 Apps Script 웹훅으로 append.
  * 잡음 필터(카페 제외, 치킨·호프=저녁)는 시드와 동일 로직 재사용.
  */
