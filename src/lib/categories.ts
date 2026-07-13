@@ -10,7 +10,7 @@ export interface CategoryDef {
 
 export const CATEGORY_TREE: CategoryDef[] = [
   { main: '한식', subs: ['국밥·탕', '고기구이', '찌개·백반', '면류(칼국수·냉면)', '죽·건강식'] },
-  { main: '분식', subs: ['떡볶이·김밥', '국수·우동'] },
+  { main: '분식', subs: ['떡볶이·김밥', '국수·우동', '만두'] },
   { main: '중식', subs: ['짜장·짬뽕', '마라·훠궈', '양꼬치·중식당'] },
   { main: '일식', subs: ['초밥·회', '라멘·우동', '돈카츠·카레', '덮밥', '장어요리'] },
   { main: '양식', subs: ['파스타·피자', '버거', '스테이크·비스트로'] },
@@ -55,6 +55,7 @@ const SUB_RULES: MappingRule[] = [
   { keywords: ['죽', '보양', '삼계', '건강식'], result: { main: '한식', sub: '죽·건강식' } },
   { keywords: ['백반', '한정식', '찌개', '김치찌개', '된장', '가정식', '기사식당'], result: { main: '한식', sub: '찌개·백반' } },
   // 분식
+  { keywords: ['만두', '교자', '왕만두'], result: { main: '분식', sub: '만두' } },
   { keywords: ['떡볶이', '김밥', '분식'], result: { main: '분식', sub: '떡볶이·김밥' } },
   { keywords: ['우동', '잔치국수'], result: { main: '분식', sub: '국수·우동' } },
   // 중식
@@ -114,6 +115,7 @@ const PRICE_BY_SUB: Record<string, PriceTier> = {
   '죽·건강식': '보통',
   '떡볶이·김밥': '가성비',
   '국수·우동': '가성비',
+  '만두': '가성비',
   '짜장·짬뽕': '가성비',
   '마라·훠궈': '보통',
   '양꼬치·중식당': '보통',
@@ -148,6 +150,7 @@ export const SOLO_FRIENDLY_SUBS = new Set<string>([
   '면류(칼국수·냉면)',
   '떡볶이·김밥',
   '국수·우동',
+  '만두',
   '라멘·우동',
   '돈카츠·카레',
   '덮밥',
