@@ -106,7 +106,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
   {
     name: '교대 마라공방',
     categoryMain: '중식',
-    categorySub: '마라·훠궈',
+    categorySub: '마라·양꼬치',
     signatureMenu: '마라샹궈+꿔바로우',
     visited: true,
     rating: 8,

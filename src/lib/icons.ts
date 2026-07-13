@@ -11,7 +11,7 @@ const SUB_SLUG: Record<string, string> = {
   '떡볶이·김밥': 'gimbap',
   '국수·우동': 'guksu',
   '짜장·짬뽕': 'jjajang',
-  '마라·훠궈': 'mala',
+  '마라·양꼬치': 'mala',
   '양꼬치·중식당': 'skewer',
   '초밥·회': 'sushi',
   '라멘·우동': 'ramen',

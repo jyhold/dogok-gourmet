@@ -11,7 +11,7 @@ export interface CategoryDef {
 export const CATEGORY_TREE: CategoryDef[] = [
   { main: '한식', subs: ['국밥·탕', '고기구이', '찌개·백반', '면류(칼국수·냉면)', '죽·건강식'] },
   { main: '분식', subs: ['떡볶이·김밥', '국수·우동'] },
-  { main: '중식', subs: ['짜장·짬뽕', '마라·훠궈', '양꼬치·중식당'] },
+  { main: '중식', subs: ['짜장·짬뽕', '마라·양꼬치', '양꼬치·중식당'] },
   { main: '일식', subs: ['초밥·회', '라멘·우동', '돈카츠·카레', '덮밥', '장어요리'] },
   { main: '양식', subs: ['파스타·피자', '버거', '스테이크·비스트로'] },
   { main: '아시안', subs: ['쌀국수·베트남', '태국·팟타이', '인도·커리'] },
@@ -58,7 +58,7 @@ const SUB_RULES: MappingRule[] = [
   { keywords: ['떡볶이', '김밥', '분식'], result: { main: '분식', sub: '떡볶이·김밥' } },
   { keywords: ['우동', '잔치국수'], result: { main: '분식', sub: '국수·우동' } },
   // 중식
-  { keywords: ['마라', '훠궈', '양꼬치'], result: { main: '중식', sub: '마라·훠궈' } },
+  { keywords: ['마라', '훠궈', '양꼬치'], result: { main: '중식', sub: '마라·양꼬치' } },
   { keywords: ['짜장', '짬뽕', '중식', '중국집', '중국요리'], result: { main: '중식', sub: '짜장·짬뽕' } },
   // 일식
   { keywords: ['초밥', '스시', '회', '횟집', '사시미', '오마카세'], result: { main: '일식', sub: '초밥·회' } },
@@ -115,7 +115,7 @@ const PRICE_BY_SUB: Record<string, PriceTier> = {
   '떡볶이·김밥': '가성비',
   '국수·우동': '가성비',
   '짜장·짬뽕': '가성비',
-  '마라·훠궈': '보통',
+  '마라·양꼬치': '보통',
   '양꼬치·중식당': '보통',
   '초밥·회': '플렉스',
   '라멘·우동': '가성비',
@@ -163,7 +163,7 @@ export const SOLO_FRIENDLY_SUBS = new Set<string>([
 export const SOLO_EXCLUDED_SUBS = new Set<string>([
   '고기구이',
   '양꼬치·중식당',
-  '마라·훠궈',
+  '마라·양꼬치',
   '뷔페·구내식당',
   '스테이크·비스트로',
 ]);
@@ -173,7 +173,7 @@ export const TEAM_DINNER_SUBS = new Set<string>([
   '고기구이',
   '초밥·회',
   '양꼬치·중식당',
-  '마라·훠궈',
+  '마라·양꼬치',
   '스테이크·비스트로',
   '장어요리',
 ]);
