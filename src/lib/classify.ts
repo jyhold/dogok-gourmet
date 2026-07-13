@@ -1,11 +1,11 @@
 // ── 카카오 결과 → 시트 행 변환 + 잡음 필터 (시드/동기화 공용) ──
 import { mapKakaoCategory, estimatePriceTier } from './categories';
 
-/** 시트 헤더 19열 (A~S 순서, 시트 1행과 동일) */
+/** 시트 헤더 20열 (A~T 순서, 시트 1행과 동일) */
 export const SHEET_HEADER = [
   'name', 'category_main', 'category_sub', 'signature_menu', 'price_tier', 'price_note',
   'address', 'lat', 'lng', 'comment', 'active', 'weight', 'meal_type',
-  'group_seating', 'group_capacity', 'phone', 'solo_friendly', 'visited', 'rating',
+  'group_seating', 'group_capacity', 'phone', 'solo_friendly', 'visited', 'rating', 'access_mode',
 ];
 
 /** classify/buildSheetRow가 쓰는 카카오 필드만 (KakaoPlace·KakaoDoc 둘 다 호환) */
@@ -38,7 +38,7 @@ function cell(v: string | undefined): string {
   return (v ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 }
 
-/** 카카오 결과 → 시트 19열 행. 자동값만 채우고 큐레이션 칸(메뉴·평점 등)은 빈 값. */
+/** 카카오 결과 → 시트 20열 행. 자동값만 채우고 큐레이션 칸(메뉴·평점·이동수단)은 빈 값. */
 export function buildSheetRow(p: KakaoLike, mealType: string): string[] {
   const mapped = mapKakaoCategory(p.category_name);
   const address = p.road_address_name || p.address_name;
@@ -62,5 +62,6 @@ export function buildSheetRow(p: KakaoLike, mealType: string): string[] {
     'FALSE', // solo_friendly (손)
     'FALSE', // visited (손)
     '', // rating (손)
+    '', // access_mode (손: 1=도보/2=따릉이/3=택시, 비우면 직선거리)
   ];
 }

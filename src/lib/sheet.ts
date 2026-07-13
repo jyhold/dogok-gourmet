@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import type { MealType, PriceTier, Restaurant } from './types';
+import type { DistanceMode, MealType, PriceTier, Restaurant } from './types';
 import { MOCK_RESTAURANTS } from './mockData';
 
 // ── 관리자DB(구글 시트) 로더 + 10분 메모리 캐시 (병목 6) ─────
@@ -32,6 +32,13 @@ function toNumber(v: string | undefined): number | undefined {
 function clampRating(v: number | undefined): number | undefined {
   if (v == null) return undefined;
   return Math.max(0, Math.min(10, Math.round(v)));
+}
+
+/** access_mode 파싱: 1=도보/2=따릉이/3=택시. 빈 값·범위 밖이면 undefined(직선거리 폴백) */
+const ACCESS_MODE_BY_NUM: Record<number, DistanceMode> = { 1: 'walk', 2: 'bike', 3: 'taxi' };
+function parseAccessMode(v: string | undefined): DistanceMode | undefined {
+  const n = toNumber(v);
+  return n != null ? ACCESS_MODE_BY_NUM[n] : undefined;
 }
 
 const PRICE_TIERS: PriceTier[] = ['가성비', '보통', '플렉스', '회식'];
@@ -76,6 +83,7 @@ function rowToRestaurant(row: Record<string, string>): Restaurant | null {
     groupCapacity: toNumber(row.group_capacity),
     phone: row.phone?.trim() || undefined,
     soloFriendly: truthy(row.solo_friendly),
+    accessMode: parseAccessMode(row.access_mode),
     visited: truthy(row.visited),
     rating: clampRating(toNumber(row.rating)),
   };

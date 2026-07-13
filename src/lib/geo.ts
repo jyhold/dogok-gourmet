@@ -60,6 +60,22 @@ export function withinRadius(from: Coords, to: Coords, mode: DistanceMode): bool
   return haversineMeters(from, to) <= DISTANCE_METERS[mode];
 }
 
+/** 이동수단 등급 (도보<따릉이<택시). 반경 중첩 구조와 정합 */
+export const MODE_LEVEL: Record<DistanceMode, number> = { walk: 1, bike: 2, taxi: 3 };
+
+/**
+ * 선택 이동수단으로 이 후보에 접근 가능한지 (병목 5 오버라이드).
+ * accessMode(관리자DB 지정)가 있으면 그 등급 기준으로 판정(직선거리 무시),
+ * 없으면 기존 직선거리 반경 컷. `선택 등급 ≥ accessMode 등급`이면 노출.
+ */
+export function reachableInMode(
+  c: { distanceM: number; accessMode?: DistanceMode },
+  mode: DistanceMode,
+): boolean {
+  if (c.accessMode) return MODE_LEVEL[c.accessMode] <= MODE_LEVEL[mode];
+  return c.distanceM <= DISTANCE_METERS[mode];
+}
+
 /** 주소 문자열이 해당 거리 모드에서 허용된 행정구역인지 */
 export function inAllowedDistrict(address: string, mode: DistanceMode): boolean {
   if (!address) return false;

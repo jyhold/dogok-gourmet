@@ -273,6 +273,26 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
     phone: '02-421-5000',
     soloFriendly: false,
   },
+  {
+    // 오버라이드 시연: 사무실과 직선거리는 가깝지만(~350m) 가파른 언덕 위라
+    // 도보 접근이 힘든 곳 → access_mode=택시. 직선거리 무시하고 택시 모드에서만 노출.
+    name: '언덕 위 감자탕',
+    categoryMain: '한식',
+    categorySub: '국밥·탕',
+    signatureMenu: '뼈해장국',
+    priceTier: '가성비',
+    priceNote: '인당 1.0만',
+    address: '서울 강남구 도곡로 언덕길',
+    lat: 37.4915,
+    lng: 127.0556,
+    comment: '가깝지만 오르막 심함 — 도보 비추, 택시/차량 권장',
+    active: true,
+    weight: 1,
+    mealType: '둘다',
+    groupSeating: false,
+    accessMode: 'taxi',
+    soloFriendly: true,
+  },
 ];
 
 // ── 카카오 로컬 검색 결과 mock (일반 후보) ──────────────────

@@ -11,7 +11,7 @@ import {
   SOLO_FRIENDLY_SUBS,
   TEAM_DINNER_SUBS,
 } from './categories';
-import { haversineMeters, inAllowedDistrict, walkMinutes } from './geo';
+import { haversineMeters, inAllowedDistrict, reachableInMode, walkMinutes } from './geo';
 
 // ── 모드 → 식사시간대 매핑 ─────────────────────────────────
 function mealOf(mode: Mode): MealType {
@@ -46,6 +46,7 @@ function curatedToCandidate(r: Restaurant, center: Coords): Candidate {
     groupSeating: r.groupSeating,
     groupCapacity: r.groupCapacity,
     soloFriendly: r.soloFriendly,
+    accessMode: r.accessMode,
     visited: r.visited,
     rating: r.rating,
     weight: r.weight,
@@ -122,14 +123,14 @@ export async function buildCandidates(
   let kakaoCands = rawKakao
     .filter((p) => inAllowedDistrict(p.road_address_name || p.address_name, distance))
     .map((p) => kakaoToCandidate(p, center))
-    .filter((c) => c.distanceM <= radius);
+    .filter((c) => reachableInMode(c, distance));
 
   // 2) 관리자DB 로드 → 반경 + meal_type 매칭 (행정구역 필터 미적용: 예외 등록 허용)
   const restaurants = await loadRestaurants();
   let curatedCands = restaurants
     .filter((r) => mealMatches(r.mealType, meal))
     .map((r) => curatedToCandidate(r, center))
-    .filter((c) => c.distanceM <= radius);
+    .filter((c) => reachableInMode(c, distance));
 
   // 점심 모드('기타' 대분류 제외): 치킨·호프·매칭 실패 등은 점심 룰렛에 안 나오게
   if (mode === 'lunch-solo' || mode === 'lunch-group') {

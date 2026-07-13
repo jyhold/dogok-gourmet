@@ -35,6 +35,17 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+/** 이동수단 안내 라벨. accessMode(관리자 지정)가 있으면 그 수단으로 표기, 없으면 도보 예상 분 */
+function accessLine(c: Candidate) {
+  if (c.accessMode === 'taxi') return <>🚕 택시 이동 (약 {c.distanceM}m)</>;
+  if (c.accessMode === 'bike') return <>🚲 따릉이 이동 (약 {c.distanceM}m)</>;
+  return (
+    <>
+      📍 도보 <b>{c.walkMinutes}분</b> (약 {c.distanceM}m)
+    </>
+  );
+}
+
 export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: Props) {
   const isTeam = mode === 'dinner-team';
   const priceText = c.priceNote ?? c.priceTier;
@@ -52,9 +63,7 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
       </div>
 
       <div className="meta-line">
-        <span>
-          📍 도보 <b>{c.walkMinutes}분</b> (약 {c.distanceM}m)
-        </span>
+        <span>{accessLine(c)}</span>
         <span>
           💰 <b>{priceText}</b>
           {c.priceEstimated && ' (추정)'}
