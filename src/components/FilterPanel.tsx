@@ -17,10 +17,11 @@ interface Props {
   onChange: (next: FilterState) => void;
 }
 
+// label은 표시 전용 — tier가 시트 price_tier 값과 매칭되는 실제 필터 키다.
 const PRICE_OPTIONS: { tier: PriceTier; label: string }[] = [
-  { tier: '가성비', label: '가성비 ~1만' },
-  { tier: '보통', label: '보통 2~3만' },
-  { tier: '플렉스', label: '플렉스 3만~' },
+  { tier: '가성비', label: '가성비' },
+  { tier: '보통', label: '일반 1~2만원' },
+  { tier: '플렉스', label: '플렉스 3만원 이상' },
 ];
 
 const DIST_OPTIONS: { d: DistanceMode; label: string }[] = [
@@ -66,7 +67,7 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
 
       {showPrice && (
         <>
-          <div className="section-label">💰 예산</div>
+          <div className="section-label">💰 예산(인당)</div>
           <div className="row">
             {PRICE_OPTIONS.map((p) => (
               <button
