@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { mapKakaoCategory, estimatePriceTier, SOLO_EXCLUDED_SUBS } from '../src/lib/categories.ts';
-import { haversineMeters, inAllowedDistrict, inServiceArea, COMPANY_COORDS } from '../src/lib/geo.ts';
+import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
 import { buildCandidates } from '../src/lib/candidates.ts';
 import type { Candidate } from '../src/lib/types.ts';
@@ -35,6 +35,27 @@ test('행정구역 필터: 도보는 관악구 차단', () => {
 test('서비스 지역 판정', () => {
   assert.equal(inServiceArea(COMPANY_COORDS), true);
   assert.equal(inServiceArea({ lat: 35.1, lng: 129.0 }), false); // 부산
+});
+
+// ── access_mode 오버라이드 (병목 5) ──
+test('reachableInMode: accessMode 있으면 거리 무시, 없으면 직선거리', () => {
+  // 직선 가깝지만(500m) 택시 지정 → 도보/따릉이 제외, 택시만 노출
+  assert.equal(reachableInMode({ distanceM: 500, accessMode: 'taxi' }, 'walk'), false);
+  assert.equal(reachableInMode({ distanceM: 500, accessMode: 'taxi' }, 'bike'), false);
+  assert.equal(reachableInMode({ distanceM: 500, accessMode: 'taxi' }, 'taxi'), true);
+  // accessMode 없으면 기존 직선거리 반경 (walk 1300 / taxi 5000)
+  assert.equal(reachableInMode({ distanceM: 3000 }, 'walk'), false);
+  assert.equal(reachableInMode({ distanceM: 3000 }, 'taxi'), true);
+  // 완전 대체: 멀어도(4km) 도보 지정이면 도보 모드 노출
+  assert.equal(reachableInMode({ distanceM: 4000, accessMode: 'walk' }, 'walk'), true);
+});
+test('buildCandidates: 택시 지정 근처 식당은 도보 제외·택시 포함', async () => {
+  const walk = await buildCandidates(COMPANY_COORDS, 'lunch-group', 'walk');
+  const taxi = await buildCandidates(COMPANY_COORDS, 'lunch-group', 'taxi');
+  const inWalk = walk.candidates.some((c) => c.name === '언덕 위 감자탕');
+  const inTaxi = taxi.candidates.some((c) => c.name === '언덕 위 감자탕');
+  assert.equal(inWalk, false, '택시 지정 식당은 도보 모드에서 제외돼야 함');
+  assert.equal(inTaxi, true, '택시 모드에서는 노출돼야 함');
 });
 
 // ── 룰렛 필터 + 추첨 ──

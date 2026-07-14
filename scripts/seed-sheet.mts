@@ -1,6 +1,6 @@
 // ── 카카오 검색으로 맛집 시트 초안 채우기 (Phase 0 보조 도구) ──
 // 군인공제회관 기준 반경 내 음식점을 카카오 로컬 API로 긁어와,
-// 시트 19열 형식의 TSV(phase0-seed.tsv)로 저장 → 구글 시트에 붙여넣고 손으로 큐레이션.
+// 시트 20열 형식의 TSV(phase0-seed.tsv)로 저장 → 구글 시트에 붙여넣고 손으로 큐레이션.
 //
 // 실행: .env.local에 KAKAO_REST_KEY 넣은 뒤
 //   npx tsx scripts/seed-sheet.mts            (기본 반경 2500m)
@@ -9,7 +9,7 @@
 // 자동으로 채워지는 칸: name / category_main·sub / address / lat / lng / phone
 //   + price_tier(카테고리 추정) / active=TRUE / weight=1 / meal_type=둘다
 // 손으로 채울 칸(비어 있음): signature_menu / price_note / comment / group_seating
-//   / group_capacity / solo_friendly / visited / rating
+//   / group_capacity / solo_friendly / visited / rating / access_mode
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { mapKakaoCategory, estimatePriceTier } from '../src/lib/categories.ts';
@@ -20,11 +20,11 @@ const DISTRICTS = ['서초구', '강남구', '동작구', '송파구'];
 const OUT = 'phase0-seed.tsv';
 const MAX_ROWS = 250;
 
-// 헤더 (시트 A1과 동일, 19열)
+// 헤더 (시트 A1과 동일, 20열)
 const HEADER = [
   'name', 'category_main', 'category_sub', 'signature_menu', 'price_tier', 'price_note',
   'address', 'lat', 'lng', 'comment', 'active', 'weight', 'meal_type',
-  'group_seating', 'group_capacity', 'phone', 'solo_friendly', 'visited', 'rating',
+  'group_seating', 'group_capacity', 'phone', 'solo_friendly', 'visited', 'rating', 'access_mode',
 ];
 
 // 다양성 확보용 키워드 (카테고리 체계 커버)
@@ -138,6 +138,7 @@ function toRow(d: KakaoDoc, mealType: string): string[] {
     'FALSE',                      // solo_friendly (손으로)
     'FALSE',                      // visited (손으로)
     '',                           // rating (손으로)
+    '',                           // access_mode (손으로: 1=도보/2=따릉이/3=택시, 비우면 직선거리)
   ];
 }
 

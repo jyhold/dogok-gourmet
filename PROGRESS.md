@@ -1,5 +1,11 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔄 v1.11 변경 (2026-07-13)
+- **분식 하위 '만두' 추가** — `categories.ts`(트리+카카오 매핑 만두/교자/왕만두+예산 가성비+혼밥친화), 도트 아이콘 `mandu`(gen-icons.mjs), `icons.ts` 매핑, docs/plan.md.
+- **관리자DB 이동수단 오버라이드 `access_mode`(시트 T열, 1=도보/2=따릉이/3=택시)** — 언덕·도로 사정으로 직선거리 판정이 어긋나는 곳을 관리자가 직접 지정. **값 있으면 직선거리 무시**하고 `선택 등급 ≥ access_mode`로 노출, null이면 기존 직선거리. curated 후보에만 적용(카카오는 값 없어 자동 직선거리).
+  - `geo.ts` `MODE_LEVEL`+`reachableInMode`(판정 단일화), `sheet.ts` `parseAccessMode`(1/2/3→walk/bike/taxi), `types.ts`(Restaurant/Candidate `accessMode?`), `candidates.ts`(curated·kakao 필터를 `reachableInMode`로 교체 + accessMode 전달), `ResultCard`(accessMode면 🚲/🚕 라벨), `mockData`(시연: '언덕 위 감자탕' accessMode=taxi), `seed-sheet.mts`(20열).
+  - 테스트 2개 추가(총 16): `reachableInMode` 단위 + buildCandidates 통합(택시 지정 식당 도보 제외·택시 포함).
+
 ## 🔁 시트 자동 동기화 (카카오 신규 → 관리자DB) — 코드 완료, 세팅 대기
 - `/api/sync`(Vercel Cron 매일 정오 KST) → 카카오 검색 → 시트에 없는 신규만 필터 → Apps Script 웹훅으로 append.
 - 코드: `src/lib/classify.ts`(필터·행생성 공용), `src/lib/sheetSync.ts`, `src/app/api/sync/route.ts`, `vercel.json`(cron).

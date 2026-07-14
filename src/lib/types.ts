@@ -37,6 +37,8 @@ export interface Restaurant {
   groupCapacity?: number;
   phone?: string;
   soloFriendly: boolean;
+  /** 관리자 지정 최소 이동수단 (시트 access_mode 1/2/3). 있으면 직선거리 대신 이 등급으로 노출 판정. 없으면 직선거리 */
+  accessMode?: DistanceMode;
   /** 관리자(미식가) 직접 방문 검증 여부 (미기입=미방문) */
   visited?: boolean;
   /** 미식가 주관적 평점 (0~10, 10점 단위 저장. 표시는 ÷2 = 별 0~5) */
@@ -70,6 +72,8 @@ export interface Candidate {
   /** 팀회식 모드에서 단체석 미확인 보조 후보 */
   groupUnconfirmed?: boolean;
   soloFriendly?: boolean;
+  /** 관리자 지정 최소 이동수단 (관리자DB만). 있으면 직선거리 대신 이 등급으로 노출 판정 */
+  accessMode?: DistanceMode;
   /** 미식가 직접 방문 검증 여부 (관리자DB만) */
   visited?: boolean;
   /** 미식가 주관적 평점 (0~10, 관리자DB만) */
