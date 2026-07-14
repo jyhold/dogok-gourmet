@@ -27,7 +27,8 @@
 
 ## 코드 지도
 - `src/lib/types.ts` 도메인 타입 (Restaurant/Candidate/모드/거리)
-- `src/lib/categories.ts` 2단계 카테고리 28종(일식 장어요리, 한식 칼국수/냉면·갈비탕 분리 포함) + 카카오 매핑(세부→대분류→기타. **규칙은 배열 순서대로 첫 매치 채택 — 냉면·갈비탕이 국밥·탕('탕')·고기구이('갈비')보다 위, 일반 '국수'는 칼국수·쌀국수보다 아래여야 함**) + 예산추정 + 혼밥휴리스틱 + **후식 5종(`DESSERT_SUBS`)·`mapKakaoCafe`(CE7)**
+- `src/lib/categories.ts` 2단계 카테고리 29종(일식 장어요리, 한식 칼국수/냉면·갈비탕/샤브샤브 포함) + 카카오 매핑(세부→대분류→기타. **규칙은 배열 순서대로 첫 매치 채택 — 샤브샤브가 칼국수보다 위(등촌샤브칼국수), 냉면·갈비탕이 국밥·탕('탕')·고기구이('갈비')보다 위, 일반 '국수'는 칼국수·쌀국수보다 아래여야 함**)
+  - 카카오는 **샤브샤브를 최상위 대분류**로 준다(`음식점 > 샤브샤브`) — 한식 밑이 아니므로 전용 규칙 필수. 없으면 기타로 떨어져 점심 룰렛에서 통째로 누락됨. + 예산추정 + 혼밥휴리스틱 + **후식 5종(`DESSERT_SUBS`)·`mapKakaoCafe`(CE7)**
 - `src/lib/geo.ts` 하버사인×1.3 보정, 서비스 바운딩박스, 행정구역 필터, 회사좌표 fallback
 - `src/lib/sheet.ts`(식당) · **`src/lib/coffeeSheet.ts`(후식, `loadCafes`)** · `src/lib/kakao.ts`(groupCode FD6/CE7) · `src/lib/weather.ts` 외부 소스 로더 (mock 폴백 내장)
 - `src/lib/candidates.ts` ★ 점심 `buildCandidates` + **후식 `buildDessertCandidates`(위치 300m/폴백 500m·자동확장)** + 중복병합(이름+50m, DB우선) + 가중치
@@ -36,7 +37,7 @@
 
 ## 디자인
 Tiny Town 도트(픽셀) 감성. CSS만으로 9-patch 프레임·픽셀 버튼(이미지 0). 폰트 Galmuri11+Press Start 2P+Pretendard.
-- **카테고리 도트 아이콘 (식사 27종 + 후식 5종 coffee/bakery/cake/donut/icecream + fallback)** — `scripts/gen-icons.mjs`(문자 그리드→PNG, 재실행 가능), `public/assets/icons/*.png`, 매핑 `src/lib/icons.ts`, 렌더 `src/components/DotIcon.tsx`.
+- **카테고리 도트 아이콘 (식사 28종 + 후식 5종 coffee/bakery/cake/donut/icecream + fallback)** — `scripts/gen-icons.mjs`(문자 그리드→PNG, 재실행 가능), `public/assets/icons/*.png`, 매핑 `src/lib/icons.ts`, 렌더 `src/components/DotIcon.tsx`.
 - **마스코트 '도곡이'(젓가락 든 꼬마 직장인, 24×24)** — `scripts/gen-mascot.mjs`, `public/assets/mascot/mascot-{happy,sad,rain}.png`, 렌더 `src/components/Mascot.tsx`. happy=인사/로딩, sad=빈결과, rain=악천후.
 - 에셋 수정=그리드 편집 후 gen 재실행. 검수=`scripts/preview-icons.mjs`·`preview-mascot.mjs`. 유료 생성도구 미사용(§3.4).
 

@@ -8,6 +8,7 @@ const SUB_SLUG: Record<string, string> = {
   '찌개·백반': 'jjigae',
   '칼국수': 'kalguksu',
   '냉면·갈비탕': 'naengmyeon',
+  '샤브샤브': 'shabu',
   '죽·건강식': 'juk',
   '떡볶이·김밥': 'gimbap',
   '국수·우동': 'guksu',

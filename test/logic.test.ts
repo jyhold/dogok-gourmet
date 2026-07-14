@@ -40,6 +40,16 @@ test('카카오 매핑: 칼국수와 냉면·갈비탕이 갈린다', () => {
   // 설렁탕은 그대로 국밥·탕
   assert.equal(mapKakaoCategory('음식점 > 한식 > 설렁탕').sub, '국밥·탕');
 });
+test('카카오 매핑: 샤브샤브 (카카오는 별도 대분류로 준다)', () => {
+  // '음식점 > 샤브샤브' — 한식/일식 밑이 아니라 최상위. 예전엔 기타로 떨어져 점심 룰렛에서 통째로 빠졌다.
+  assert.deepEqual(mapKakaoCategory('음식점 > 샤브샤브'), { main: '한식', sub: '샤브샤브' });
+  assert.equal(mapKakaoCategory('음식점 > 샤브샤브 > 채선당').sub, '샤브샤브');
+  // 상호에 '칼국수'가 붙어도 샤브샤브 우선 (규칙 순서 보장)
+  assert.equal(mapKakaoCategory('음식점 > 샤브샤브 > 등촌샤브칼국수').sub, '샤브샤브');
+  assert.equal(mapKakaoCategory('음식점 > 샤브샤브 > 명동칼국수샤브샤브').sub, '샤브샤브');
+  // 샤브샤브는 다인 전제 → 혼밥 모드 제외
+  assert.ok(SOLO_EXCLUDED_SUBS.has('샤브샤브'));
+});
 test("카카오 매핑: '국수'가 쌀국수·칼국수를 빼앗지 않는다", () => {
   assert.equal(mapKakaoCategory('음식점 > 아시아음식 > 쌀국수').main, '아시안');
   assert.equal(mapKakaoCategory('음식점 > 한식 > 칼국수').sub, '칼국수');
