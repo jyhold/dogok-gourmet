@@ -47,7 +47,7 @@ function accessLine(c: Candidate) {
 }
 
 export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: Props) {
-  const isTeam = mode === 'dinner-team';
+  const isDessert = mode === 'dessert';
   const priceText = c.priceNote ?? c.priceTier;
 
   return (
@@ -70,19 +70,6 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
         </span>
       </div>
 
-      {isTeam && c.groupSeating && (
-        <div className="meta-line">
-          <span>
-            👥 단체석 {c.groupCapacity ? <b>~{c.groupCapacity}명</b> : '구비'}
-          </span>
-        </div>
-      )}
-      {isTeam && c.groupUnconfirmed && (
-        <div className="meta-line">
-          <span style={{ color: 'var(--ink-soft)' }}>⚠️ 단체석 미확인 — 전화로 확인 권장</span>
-        </div>
-      )}
-
       {c.comment && <div className="comment">💬 {c.comment}</div>}
 
       <div className="menu-slot">
@@ -94,7 +81,8 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
         )}
       </div>
 
-      {c.rating != null && (
+      {/* 점심: 미식가 평점(별점). 후식: 추천/방문 배지 */}
+      {!isDessert && c.rating != null && (
         <div className="rating-slot">
           <span className="rating-label">⭐ 미식가 평점</span>
           <StarRating rating={c.rating} />
@@ -102,14 +90,15 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
           {c.visited && <span className="visited-badge">✅ 직접 방문 인증</span>}
         </div>
       )}
+      {isDessert && (c.recommended || c.visited) && (
+        <div className="rating-slot">
+          {c.recommended && <span className="visited-badge">👍 미식가 추천</span>}
+          {c.visited && <span className="visited-badge">✅ 직접 방문 인증</span>}
+        </div>
+      )}
 
       <div className="row" style={{ marginTop: 14 }}>
-        {isTeam && c.phone && (
-          <a className="btn btn-primary" href={`tel:${c.phone.replace(/[^0-9+]/g, '')}`}>
-            📞 바로 전화 예약
-          </a>
-        )}
-        {!isTeam && c.phone && (
+        {c.phone && (
           <span className="hint" style={{ alignSelf: 'center' }}>
             ☎ {c.phone}
           </span>

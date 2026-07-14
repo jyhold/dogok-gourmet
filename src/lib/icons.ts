@@ -29,6 +29,12 @@ const SUB_SLUG: Record<string, string> = {
   '샌드위치·브런치': 'sandwich',
   '도시락': 'bento',
   '뷔페·구내식당': 'buffet',
+  // 후식(dessert) 5종
+  '커피·음료': 'coffee',
+  '베이커리·빵': 'bakery',
+  '케이크·디저트': 'cake',
+  '도넛·와플': 'donut',
+  '아이스크림·빙수': 'icecream',
   '기타': 'fallback',
 };
 

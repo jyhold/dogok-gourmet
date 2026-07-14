@@ -183,3 +183,37 @@ export const TEAM_DINNER_SUBS = new Set<string>([
 
 /** 점심형(저녁에 닫는) 카테고리 → 저녁 모드에서 가중치↓/제외 (리스크 대응) */
 export const LUNCH_ONLY_SUBS = new Set<string>(['찌개·백반', '뷔페·구내식당', '죽·건강식']);
+
+// ── 후식(dessert) 카테고리 ─────────────────────────────────
+// 점심 식후 근처 카페·디저트 전용. 대분류는 항상 '후식', 하위 5종.
+// 카카오 CE7(카페) 결과와 coffee 시트가 모두 이 체계를 쓴다.
+
+export const DESSERT_MAIN = '후식';
+
+export const DESSERT_SUBS = [
+  '커피·음료',
+  '베이커리·빵',
+  '케이크·디저트',
+  '도넛·와플',
+  '아이스크림·빙수',
+] as const;
+
+// 카카오 CE7 category_name → 후식 하위. 세부(구체) 먼저, 실패 시 커피·음료.
+// classify.ts의 CAFE_RE 키워드를 5종으로 분류.
+const DESSERT_RULES: MappingRule[] = [
+  { keywords: ['아이스크림', '젤라또', '빙수'], result: { main: DESSERT_MAIN, sub: '아이스크림·빙수' } },
+  { keywords: ['도넛', '와플', '크로플', '츄러스'], result: { main: DESSERT_MAIN, sub: '도넛·와플' } },
+  { keywords: ['케이크', '타르트', '마카롱', '디저트', '구움과자'], result: { main: DESSERT_MAIN, sub: '케이크·디저트' } },
+  { keywords: ['베이커리', '제과', '베이글', '빵'], result: { main: DESSERT_MAIN, sub: '베이커리·빵' } },
+  { keywords: ['커피', '카페', '차', '티', '스무디', '주스', '음료', '전통찻집'], result: { main: DESSERT_MAIN, sub: '커피·음료' } },
+];
+
+/** 카카오 CE7 category_name → 후식 하위 카테고리. 실패 시 '커피·음료'(CE7은 전부 카페) */
+export function mapKakaoCafe(categoryName: string): MappedCategory {
+  if (categoryName) {
+    for (const rule of DESSERT_RULES) {
+      if (rule.keywords.some((k) => categoryName.includes(k))) return rule.result;
+    }
+  }
+  return { main: DESSERT_MAIN, sub: '커피·음료' };
+}

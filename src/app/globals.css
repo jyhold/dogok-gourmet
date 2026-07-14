@@ -282,6 +282,13 @@ button {
   gap: 12px;
 }
 
+/* 후식 단일 카드 (하위 분기 없음) */
+.grid-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
 /* ── 모드 선택 카드 ── */
 .mode-card {
   display: flex;

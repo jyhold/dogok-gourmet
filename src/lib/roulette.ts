@@ -37,6 +37,17 @@ export function boostVisited(candidates: Candidate[], on: boolean): Candidate[] 
   );
 }
 
+/**
+ * 후식 '미식가 추천 우선' 옵션 — recommended 후보의 가중치를 크게 높인다.
+ * boostVisited의 후식판(평점 대신 추천 T/F 기준). 확률 부스트, 하드 필터 아님.
+ */
+export function boostRecommended(candidates: Candidate[], on: boolean): Candidate[] {
+  if (!on) return candidates;
+  return candidates.map((c) =>
+    c.recommended ? { ...c, weight: c.weight * VISITED_BOOST } : c,
+  );
+}
+
 /** 가중치 랜덤 1곳 추첨. 후보 없으면 null. */
 export function weightedPick(candidates: Candidate[], rng: () => number = Math.random): Candidate | null {
   if (candidates.length === 0) return null;
