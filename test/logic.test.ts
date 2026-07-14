@@ -5,7 +5,12 @@ import { mapKakaoCategory, mapKakaoCafe, estimatePriceTier, SOLO_EXCLUDED_SUBS }
 import { buildCafeRow, COFFEE_SHEET_HEADER } from '../src/lib/classify.ts';
 import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, boostRecommended, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
-import { buildCandidates, buildDessertCandidates } from '../src/lib/candidates.ts';
+import {
+  buildCandidates,
+  buildDessertCandidates,
+  dessertDistanceWeight,
+  DESSERT_NEAR_BOOST,
+} from '../src/lib/candidates.ts';
 import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
 import type { Candidate } from '../src/lib/types.ts';
 
@@ -75,6 +80,21 @@ test('applyFilters: 제외/seen/예산', () => {
 });
 test('weightedPick: 빈 배열 null', () => {
   assert.equal(weightedPick([]), null);
+});
+test('후식 거리 가중치: 가까울수록 크고 반경 끝은 1배', () => {
+  assert.equal(dessertDistanceWeight(0, 300), DESSERT_NEAR_BOOST); // 코앞 = 최대
+  assert.equal(dessertDistanceWeight(300, 300), 1); // 반경 끝 = 1배(하한)
+  assert.ok(dessertDistanceWeight(50, 300) > dessertDistanceWeight(250, 300));
+  assert.equal(dessertDistanceWeight(150, 300), 2); // 중간 = 선형
+});
+test('후식 거리 가중치: 반경 밖·음수도 1~최대로 클램프', () => {
+  assert.equal(dessertDistanceWeight(9999, 300), 1);
+  assert.equal(dessertDistanceWeight(-10, 300), DESSERT_NEAR_BOOST);
+});
+test('후식 거리 가중치: 확장 반경(1km)에선 기준이 함께 커짐', () => {
+  // 300m 지점: 반경 300m일 땐 1배(끝), 반경 1km일 땐 더 높게(아직 가까운 편)
+  assert.equal(dessertDistanceWeight(300, 300), 1);
+  assert.ok(dessertDistanceWeight(300, 1000) > 2);
 });
 test('boostVisited: 켜면 visited만 가중치↑, 끄면 그대로', () => {
   const pool = [

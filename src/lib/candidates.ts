@@ -223,6 +223,19 @@ export interface DessertResult {
 }
 
 /** 지정 반경으로 후식 후보 1회 구성 (카카오 CE7 + coffee 시트 + 병합) */
+/** 가장 가까운 곳의 가중치 배수 (반경 끝은 1배) */
+export const DESSERT_NEAR_BOOST = 3;
+
+/**
+ * 후식 거리 가중치 — 점심 후 짧게 다녀오는 특성상 가까울수록 자주 나오게.
+ * 0m=3배 → 반경 끝=1배로 선형 감쇠. 1배 하한이라 먼 곳도 가끔은 나온다.
+ * 반경 기준 상대값이라 자동 확장(1km) 시에도 자연스럽게 동작.
+ */
+export function dessertDistanceWeight(distM: number, radiusM: number): number {
+  const t = Math.min(1, Math.max(0, distM / Math.max(1, radiusM)));
+  return 1 + (DESSERT_NEAR_BOOST - 1) * (1 - t);
+}
+
 async function buildDessertAtRadius(center: Coords, radius: number): Promise<Candidate[]> {
   // 1) 카카오 CE7(카페) 반경 검색 → 후보화 → 직선거리 컷 (행정구역 필터 미적용)
   const rawKakao = await searchNearby(center, radius, 'CE7');
@@ -257,5 +270,11 @@ export async function buildDessertCandidates(
     expanded = true;
   }
 
-  return { candidates, expanded, radius: usedRadius };
+  // 최종 반경 기준으로 거리 가중치 적용 (가까울수록 잘 나오게)
+  const weighted = candidates.map((c) => ({
+    ...c,
+    weight: c.weight * dessertDistanceWeight(c.distanceM, usedRadius),
+  }));
+
+  return { candidates: weighted, expanded, radius: usedRadius };
 }
