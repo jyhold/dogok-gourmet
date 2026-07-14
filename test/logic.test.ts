@@ -85,7 +85,8 @@ test('후식 거리 가중치: 가까울수록 크고 반경 끝은 1배', () =>
   assert.equal(dessertDistanceWeight(0, 300), DESSERT_NEAR_BOOST); // 코앞 = 최대
   assert.equal(dessertDistanceWeight(300, 300), 1); // 반경 끝 = 1배(하한)
   assert.ok(dessertDistanceWeight(50, 300) > dessertDistanceWeight(250, 300));
-  assert.equal(dessertDistanceWeight(150, 300), 2); // 중간 = 선형
+  // 중간 지점 = 1배와 최대의 정확히 중간 (선형). 상수를 튜닝해도 성립.
+  assert.equal(dessertDistanceWeight(150, 300), 1 + (DESSERT_NEAR_BOOST - 1) / 2);
 });
 test('후식 거리 가중치: 반경 밖·음수도 1~최대로 클램프', () => {
   assert.equal(dessertDistanceWeight(9999, 300), 1);
@@ -94,7 +95,7 @@ test('후식 거리 가중치: 반경 밖·음수도 1~최대로 클램프', () 
 test('후식 거리 가중치: 확장 반경(1km)에선 기준이 함께 커짐', () => {
   // 300m 지점: 반경 300m일 땐 1배(끝), 반경 1km일 땐 더 높게(아직 가까운 편)
   assert.equal(dessertDistanceWeight(300, 300), 1);
-  assert.ok(dessertDistanceWeight(300, 1000) > 2);
+  assert.ok(dessertDistanceWeight(300, 1000) > dessertDistanceWeight(300, 300));
 });
 test('boostVisited: 켜면 visited만 가중치↑, 끄면 그대로', () => {
   const pool = [
