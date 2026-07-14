@@ -160,6 +160,16 @@ test('buildDessertCandidates: 반경 밖(관악) 카페는 제외', async () => 
   assert.equal(gwanak, false);
 });
 
+test('buildDessertCandidates: 현재 위치 기준 300m는 더 촘촘하게 컷', async () => {
+  const { candidates, radius, expanded } = await buildDessertCandidates(COMPANY_COORDS, 300);
+  assert.equal(radius, 300);
+  assert.equal(expanded, false, 'mock 8곳이 300m 내라 확장 불필요');
+  assert.ok(candidates.length >= 3);
+  assert.ok(candidates.every((c) => c.distanceM <= 300), '모든 후보가 300m 이내');
+  // 300m 밖(예: ~311m 매봉 디저트카페, ~387m 도곡 젤라또)은 제외돼야 함
+  assert.ok(!candidates.some((c) => c.name === '매봉 디저트카페'));
+});
+
 // ── 후식 동기화: 시트 행 스키마 정합 ──
 test('buildCafeRow: 열 개수가 COFFEE_SHEET_HEADER와 일치', () => {
   const row = buildCafeRow({

@@ -31,7 +31,7 @@ const DIST_OPTIONS: { d: DistanceMode; label: string }[] = [
 
 export default function FilterPanel({ mode, value, onChange }: Props) {
   const isDessert = mode === 'dessert';
-  // 예산 필터는 점심 전용. 후식은 예산·거리 필터 모두 숨김(반경 500m 고정).
+  // 예산 필터는 점심 전용. 후식은 예산·거리 필터 모두 숨김(반경은 위치 기반 자동).
   const showPrice = mode === 'lunch-solo' || mode === 'lunch-group';
 
   const toggleSub = (sub: string) => {
@@ -89,7 +89,7 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
 
       {isDessert ? (
         <p className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
-          🍰 후식: 현재 위치 반경 500m 카페·디저트 (부족하면 자동으로 넓혀요)
+          🍰 후식: 현재 위치 반경 300m 카페·디저트 (위치 못 받으면 500m · 부족하면 자동으로 넓혀요)
         </p>
       ) : (
         <>

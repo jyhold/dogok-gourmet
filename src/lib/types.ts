@@ -22,10 +22,14 @@ export const DISTANCE_METERS: Record<DistanceMode, number> = {
   taxi: 5000,
 };
 
-// 후식 모드 반경(직선거리, m). 기본 500m, 결과 부족 시 확장.
-export const DESSERT_RADIUS_M = 500;
+// 후식 모드 반경(직선거리, m). 소스별 차등 + 결과 부족 시 확장.
+/** 현재 위치(브라우저 Geolocation) 기준 — 식후 바로 근처라 촘촘하게 */
+export const DESSERT_RADIUS_LOCATION_M = 300;
+/** 군인공제회관 폴백 기준(위치 거부·서비스지역 밖) */
+export const DESSERT_RADIUS_COMPANY_M = 500;
+/** 결과 부족 시 확장 반경 */
 export const DESSERT_RADIUS_EXPANDED_M = 1000;
-/** 확장 트리거: 500m 후보가 이 수 미만이면 반경을 넓힌다 */
+/** 확장 트리거: base 반경 후보가 이 수 미만이면 반경을 넓힌다 */
 export const DESSERT_MIN_RESULTS = 3;
 
 /** 관리자DB(구글 시트) 한 행 = 큐레이션된 맛집 */

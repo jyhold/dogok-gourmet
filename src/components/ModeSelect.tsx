@@ -52,7 +52,7 @@ export default function ModeSelect({ defaultMeal, onPick }: Props) {
           <button className="mode-card frame" onClick={() => onPick('dessert')}>
             <span className="emoji">🍰</span>
             <span className="mode-name">후식</span>
-            <span className="mode-desc">점심 후 근처 카페·디저트 (반경 500m)</span>
+            <span className="mode-desc">점심 후 내 주변 카페·디저트</span>
           </button>
         </div>
       )}

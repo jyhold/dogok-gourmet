@@ -1,7 +1,7 @@
 import type { Cafe, Candidate, Coords, DistanceMode, Mode, Restaurant } from './types';
 import {
   DISTANCE_METERS,
-  DESSERT_RADIUS_M,
+  DESSERT_RADIUS_COMPANY_M,
   DESSERT_RADIUS_EXPANDED_M,
   DESSERT_MIN_RESULTS,
 } from './types';
@@ -239,18 +239,18 @@ async function buildDessertAtRadius(center: Coords, radius: number): Promise<Can
 }
 
 /**
- * 후식 모드 후보 구성 — 현재 위치 반경 500m.
+ * 후식 모드 후보 구성 — base 반경(현재 위치 300m / 군인공제회관 폴백 500m).
  * 결과가 부족(DESSERT_MIN_RESULTS 미만)하면 1km까지 1회 자동 확장.
  */
 export async function buildDessertCandidates(
   center: Coords,
-  radius: number = DESSERT_RADIUS_M,
+  radius: number = DESSERT_RADIUS_COMPANY_M,
 ): Promise<DessertResult> {
   let candidates = await buildDessertAtRadius(center, radius);
   let expanded = false;
   let usedRadius = radius;
 
-  if (candidates.length < DESSERT_MIN_RESULTS && radius === DESSERT_RADIUS_M) {
+  if (candidates.length < DESSERT_MIN_RESULTS && radius < DESSERT_RADIUS_EXPANDED_M) {
     usedRadius = DESSERT_RADIUS_EXPANDED_M;
     candidates = await buildDessertAtRadius(center, usedRadius);
     expanded = true;
