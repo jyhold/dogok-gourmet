@@ -2,8 +2,9 @@
 // /api/sync 에서 호출. Vercel Cron이 하루 1회 트리거.
 import { COMPANY_COORDS, haversineMeters, inAllowedDistrict } from './geo';
 import { searchNearby } from './kakao';
-import { loadRestaurants } from './sheet';
+import { loadRestaurants, loadRestaurantNames } from './sheet';
 import { classifyKakao, buildSheetRow } from './classify';
+import { isDuplicatePlace, type KnownPlace } from './syncDedupe';
 
 export interface SyncResult {
   scanned: number; // 카카오에서 훑은 수
@@ -11,11 +12,6 @@ export interface SyncResult {
   added: number; // 실제 append된 수
   skipped: number; // 중복/필터로 제외된 수
   error?: string;
-}
-
-/** 상호 핵심어(지점명 제거) 정규화 — 중복 판정용 */
-function normName(s: string): string {
-  return s.replace(/\s|점$|본점|지점|역점/g, '');
 }
 
 /**
@@ -70,10 +66,17 @@ export async function syncNewRestaurants(radiusM = 2500): Promise<SyncResult> {
     return { scanned: 0, fresh: 0, added: 0, skipped: 0, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
   }
 
-  const [kakao, existing] = await Promise.all([
+  const [kakao, parsed, allNames] = await Promise.all([
     searchNearby(COMPANY_COORDS, radiusM),
     loadRestaurants(),
+    loadRestaurantNames(),
   ]);
+
+  // 중복 비교 대상: 파싱본(좌표 O) + 원본 상호명(좌표 없는 스킵 행까지 커버)
+  const existing: KnownPlace[] = [
+    ...parsed.map((r) => ({ name: r.name, lat: r.lat, lng: r.lng })),
+    ...allNames.map((name) => ({ name })),
+  ];
 
   let skipped = 0;
   const rows: string[][] = [];
@@ -98,15 +101,8 @@ export async function syncNewRestaurants(radiusM = 2500): Promise<SyncResult> {
       skipped++;
       continue;
     }
-    // 시트에 이미 있으면(이름+50m) 중복 → 제외
-    const dup = existing.some(
-      (r) =>
-        haversineMeters({ lat: r.lat, lng: r.lng }, { lat, lng }) <= 50 &&
-        (r.name.includes(p.place_name) ||
-          p.place_name.includes(r.name) ||
-          normName(r.name) === normName(p.place_name)),
-    );
-    if (dup) {
+    // 시트에 이미 있으면 중복 → 제외 (이름 완전일치=거리 무관, 부분일치=150m)
+    if (isDuplicatePlace({ name: p.place_name, lat, lng }, existing)) {
       skipped++;
       continue;
     }

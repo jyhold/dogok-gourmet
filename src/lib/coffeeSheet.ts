@@ -69,10 +69,16 @@ function rowToCafe(row: Record<string, string>): Cafe | null {
   };
 }
 
-async function fetchFromSheet(): Promise<Cafe[]> {
+// 원본 CSV 행 캐시 — loadCafes(파싱)와 loadCafeNames(원본)가 공유
+let rawCache: { rows: Record<string, string>[]; at: number } | null = null;
+
+/** 후식 시트 원본 행(헤더명 키) — 스킵 없이 전부. 10분 캐시. */
+async function fetchCoffeeRows(): Promise<Record<string, string>[]> {
   const sheetId = process.env.GOOGLE_SHEET_ID;
   const tab = process.env.GOOGLE_COFFEE_SHEET_TAB ?? 'coffee';
   if (!sheetId) throw new Error('GOOGLE_SHEET_ID 미설정');
+
+  if (rawCache && Date.now() - rawCache.at < CACHE_TTL_MS) return rawCache.rows;
 
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(
     tab,
@@ -80,19 +86,32 @@ async function fetchFromSheet(): Promise<Cafe[]> {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`후식 시트 fetch 실패: ${res.status}`);
   const csv = await res.text();
+  const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
+  rawCache = { rows: parsed.data, at: Date.now() };
+  return parsed.data;
+}
 
-  const parsed = Papa.parse<Record<string, string>>(csv, {
-    header: true,
-    skipEmptyLines: true,
-  });
-
+async function fetchFromSheet(): Promise<Cafe[]> {
+  const rows = await fetchCoffeeRows();
   const out: Cafe[] = [];
-  for (const row of parsed.data) {
+  for (const row of rows) {
     const c = rowToCafe(row);
     if (c) out.push(c);
     else if (row.name) console.warn(`[coffee] 건너뛴 행: ${row.name}`);
   }
   return out;
+}
+
+/** 후식 시트의 모든 상호명(파서 스킵 행 포함). 동기화 중복 판정 보강용. */
+export async function loadCafeNames(): Promise<string[]> {
+  if (useMock()) return MOCK_CAFES.map((c) => c.name);
+  try {
+    const rows = await fetchCoffeeRows();
+    return rows.map((r) => r.name?.trim()).filter((n): n is string => !!n);
+  } catch (err) {
+    console.error('[coffee] 상호명 로드 실패:', err);
+    return [];
+  }
 }
 
 /** 후식 큐레이션 DB 로드 (캐시 우선). mock 모드면 mock 반환. */

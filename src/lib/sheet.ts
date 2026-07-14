@@ -89,10 +89,16 @@ function rowToRestaurant(row: Record<string, string>): Restaurant | null {
   };
 }
 
-async function fetchFromSheet(): Promise<Restaurant[]> {
+// 원본 CSV 행 캐시(탭별) — loadRestaurants(파싱)와 loadRestaurantNames(원본)가 공유해 중복 fetch 방지
+const rawCache = new Map<string, { rows: Record<string, string>[]; at: number }>();
+
+/** 시트 원본 행(헤더명 키) — 스킵 없이 전부. 10분 캐시. */
+async function fetchSheetRows(tab: string): Promise<Record<string, string>[]> {
   const sheetId = process.env.GOOGLE_SHEET_ID;
-  const tab = process.env.GOOGLE_SHEET_TAB ?? 'restaurants';
   if (!sheetId) throw new Error('GOOGLE_SHEET_ID 미설정');
+
+  const hit = rawCache.get(tab);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.rows;
 
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(
     tab,
@@ -100,19 +106,38 @@ async function fetchFromSheet(): Promise<Restaurant[]> {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`시트 fetch 실패: ${res.status}`);
   const csv = await res.text();
+  const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
+  rawCache.set(tab, { rows: parsed.data, at: Date.now() });
+  return parsed.data;
+}
 
-  const parsed = Papa.parse<Record<string, string>>(csv, {
-    header: true,
-    skipEmptyLines: true,
-  });
+async function fetchFromSheet(): Promise<Restaurant[]> {
+  const tab = process.env.GOOGLE_SHEET_TAB ?? 'restaurants';
+  const rows = await fetchSheetRows(tab);
 
   const out: Restaurant[] = [];
-  for (const row of parsed.data) {
+  for (const row of rows) {
     const r = rowToRestaurant(row);
     if (r) out.push(r);
     else if (row.name) console.warn(`[sheet] 건너뛴 행: ${row.name}`);
   }
   return out;
+}
+
+/**
+ * 시트의 모든 상호명(파서에서 스킵된 행 포함). 동기화 중복 판정 보강용.
+ * mock 모드면 mock 상호. 실패 시 빈 배열(중복 판정은 파싱본으로만).
+ */
+export async function loadRestaurantNames(): Promise<string[]> {
+  if (useMock()) return MOCK_RESTAURANTS.map((r) => r.name);
+  try {
+    const tab = process.env.GOOGLE_SHEET_TAB ?? 'restaurants';
+    const rows = await fetchSheetRows(tab);
+    return rows.map((r) => r.name?.trim()).filter((n): n is string => !!n);
+  } catch (err) {
+    console.error('[sheet] 상호명 로드 실패:', err);
+    return [];
+  }
 }
 
 /** 관리자DB 로드 (캐시 우선). mock 모드면 mock 반환. */
