@@ -21,10 +21,18 @@ export interface SyncResult {
  */
 export async function pingWebhook(
   target: 'restaurants' | 'coffee' = 'restaurants',
-): Promise<{ ok: boolean; sheet: string; added?: number; error?: string }> {
+): Promise<{
+  ok: boolean;
+  requested: string; // 우리가 요청한 탭
+  wroteTo?: string; // Apps Script가 실제로 썼다고 응답한 탭 (없으면 옛 doPost 신호)
+  added?: number;
+  error?: string;
+}> {
   const url = process.env.SHEET_WEBHOOK_URL;
   const secret = process.env.SHEET_WEBHOOK_SECRET;
-  if (!url || !secret) return { ok: false, sheet: target, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
+  if (!url || !secret) {
+    return { ok: false, requested: target, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
+  }
 
   // active=FALSE → 앱에 미노출. name에 눈에 띄는 표식. 각 시트 헤더 열수에 맞춤.
   const testRow =
@@ -46,12 +54,29 @@ export async function pingWebhook(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret, sheet: target, rows: [testRow] }),
     });
-    if (!res.ok) return { ok: false, sheet: target, error: `웹훅 ${res.status}` };
-    const j = (await res.json().catch(() => ({}))) as { added?: number; error?: string };
-    if (j.error) return { ok: false, sheet: target, error: `웹훅 응답: ${j.error}` };
-    return { ok: true, sheet: target, added: j.added ?? 1 };
+    if (!res.ok) return { ok: false, requested: target, error: `웹훅 ${res.status}` };
+    const j = (await res.json().catch(() => ({}))) as {
+      added?: number;
+      error?: string;
+      sheet?: string;
+    };
+    if (j.error) return { ok: false, requested: target, error: `웹훅 응답: ${j.error}` };
+    if (typeof j.added !== 'number') {
+      return { ok: false, requested: target, error: '웹훅 응답에 added 없음 — Apps Script 배포 버전 확인' };
+    }
+    // Apps Script가 응답한 탭을 그대로 노출. sheet가 없거나 요청과 다르면 옛 doPost(항상 restaurants).
+    if (j.sheet !== target) {
+      return {
+        ok: false,
+        requested: target,
+        wroteTo: j.sheet ?? '(응답에 sheet 없음)',
+        added: j.added,
+        error: `요청한 '${target}' 탭이 아니라 다른 곳에 기록됨 — Apps Script가 옛 버전(sheet 미지원)입니다. 새 doPost로 교체 후 '새 버전'으로 재배포하세요.`,
+      };
+    }
+    return { ok: true, requested: target, wroteTo: j.sheet, added: j.added };
   } catch (err) {
-    return { ok: false, sheet: target, error: `웹훅 호출 실패: ${(err as Error).message}` };
+    return { ok: false, requested: target, error: `웹훅 호출 실패: ${(err as Error).message}` };
   }
 }
 
