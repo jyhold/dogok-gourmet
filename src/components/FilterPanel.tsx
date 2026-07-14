@@ -89,7 +89,7 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
 
       {isDessert ? (
         <p className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
-          🍰 후식: 현재 위치 반경 300m 카페·디저트 (위치 못 받으면 500m · 부족하면 자동으로 넓혀요)
+          🍰 커피/디저트: 현재 위치 반경 300m (위치 못 받으면 500m · 부족하면 자동으로 넓혀요)
         </p>
       ) : (
         <>

@@ -32,7 +32,7 @@ export default function ModeSelect({ defaultMeal, onPick }: Props) {
           aria-selected={meal === 'dessert'}
           onClick={() => setMeal('dessert')}
         >
-          🍰 후식
+          🍰 커피/디저트
         </button>
       </div>
 
@@ -51,14 +51,14 @@ export default function ModeSelect({ defaultMeal, onPick }: Props) {
         <div className="grid-1">
           <button className="mode-card frame" onClick={() => onPick('dessert')}>
             <span className="emoji">🍰</span>
-            <span className="mode-name">후식</span>
+            <span className="mode-name">커피/디저트</span>
             <span className="mode-desc">점심 후 내 주변 카페·디저트</span>
           </button>
         </div>
       )}
 
       <p className="hint">
-        지금 {defaultMeal === 'lunch' ? '점심' : '후식'} 시간대로 열었어요 · 탭으로 전환 가능
+        지금 {defaultMeal === 'lunch' ? '점심' : '커피/디저트'} 시간대로 열었어요 · 탭으로 전환 가능
       </p>
     </div>
   );

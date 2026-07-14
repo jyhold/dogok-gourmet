@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { mapKakaoCategory, mapKakaoCafe, estimatePriceTier, SOLO_EXCLUDED_SUBS } from '../src/lib/categories.ts';
+import {
+  mapKakaoCategory,
+  mapKakaoCafe,
+  estimatePriceTier,
+  SOLO_EXCLUDED_SUBS,
+  DESSERT_MAIN,
+} from '../src/lib/categories.ts';
 import { buildCafeRow, COFFEE_SHEET_HEADER } from '../src/lib/classify.ts';
 import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, boostRecommended, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
@@ -147,7 +153,7 @@ test('mapKakaoCafe: 세부 우선, 실패 시 커피·음료', () => {
   assert.equal(mapKakaoCafe('음식점 > 카페 > 커피전문점').sub, '커피·음료');
   // 미매칭도 커피·음료로 (CE7은 전부 카페)
   assert.equal(mapKakaoCafe('음식점 > 카페').sub, '커피·음료');
-  assert.equal(mapKakaoCafe('음식점 > 카페').main, '후식');
+  assert.equal(mapKakaoCafe('음식점 > 카페').main, DESSERT_MAIN);
 });
 
 // ── 후식 추천 부스트 ──
@@ -168,8 +174,8 @@ test('buildDessertCandidates: 500m 내 후보 + curated 추천/방문 필드', a
   assert.ok(candidates.length > 0, '후식 후보가 있어야 함');
   // 모두 사용 반경 이내
   assert.ok(candidates.every((c) => c.distanceM <= radius));
-  // 모든 후보 대분류는 '후식'
-  assert.ok(candidates.every((c) => c.categoryMain === '후식'));
+  // 모든 후보 대분류는 후식 라벨
+  assert.ok(candidates.every((c) => c.categoryMain === DESSERT_MAIN));
   // curated(coffee 시트) 후보에 recommended/visited가 전달됨
   const curated = candidates.filter((c) => c.curated);
   assert.ok(curated.length > 0, 'coffee 시트 큐레이션 후보가 있어야 함');
