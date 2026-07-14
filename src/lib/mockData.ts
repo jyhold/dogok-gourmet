@@ -1,4 +1,4 @@
-import type { Restaurant } from './types';
+import type { Cafe, Restaurant } from './types';
 
 // ── 관리자DB(구글 시트) mock — Phase 1용 큐레이션 맛집 ──────
 // Phase 0에서 실제 시트로 교체. 좌표는 양재/강남/서초 인근 실측 근사값.
@@ -355,3 +355,97 @@ function place(
     place_url: `https://place.map.kakao.com/${id}`,
   };
 }
+
+// ── 후식(coffee) 시트 mock — Phase 1용 큐레이션 카페·디저트 ──────
+// 좌표는 군인공제회관(37.4891,127.0529) 인근. 대부분 500m 내, 마지막 1곳은 ~700m(확장 시연).
+// 평점(rating) 없음 — visited(방문)+recommended(추천 T/F)만.
+
+export const MOCK_CAFES: Cafe[] = [
+  {
+    name: '도곡 로스터스',
+    categorySub: '커피·음료',
+    signatureMenu: '핸드드립 에티오피아',
+    priceNote: '아메리카노 4.5천',
+    address: '서울 강남구 남부순환로 2800',
+    lat: 37.4901,
+    lng: 127.0539,
+    comment: '점심 후 커피 한 잔 딱 좋음. 바 좌석 여유',
+    active: true,
+    weight: 2,
+    phone: '02-573-1010',
+    visited: true,
+    recommended: true,
+  },
+  {
+    name: '공제회관 앞 베이크샵',
+    categorySub: '베이커리·빵',
+    signatureMenu: '소금빵·크루아상',
+    priceNote: '소금빵 3.5천',
+    address: '서울 강남구 남부순환로 2806',
+    lat: 37.4909,
+    lng: 127.0534,
+    comment: '갓 구운 소금빵 인기. 포장 추천',
+    active: true,
+    weight: 1,
+    visited: true,
+    recommended: false,
+  },
+  {
+    name: '매봉 디저트카페',
+    categorySub: '케이크·디저트',
+    signatureMenu: '바스크 치즈케이크',
+    priceNote: '조각 6천',
+    address: '서울 강남구 도곡로 1길',
+    lat: 37.4873,
+    lng: 127.0556,
+    comment: '치즈케이크 진함. 2층 좌석 넓음',
+    active: true,
+    weight: 1,
+    phone: '02-575-2020',
+    recommended: true,
+  },
+  {
+    name: '도곡 젤라또',
+    categorySub: '아이스크림·빙수',
+    signatureMenu: '피스타치오 젤라또',
+    priceNote: '싱글 4천',
+    address: '서울 강남구 남부순환로 2790',
+    lat: 37.4919,
+    lng: 127.0503,
+    comment: '식후 디저트로 가볍게',
+    active: true,
+    weight: 1,
+    visited: true,
+    recommended: true,
+  },
+  {
+    // ~700m — 500m 밖, 1km 내. 반경 확장 시연용.
+    name: '양재천 도넛공방',
+    categorySub: '도넛·와플',
+    signatureMenu: '수제 글레이즈드 도넛',
+    priceNote: '도넛 2.5천',
+    address: '서울 강남구 매봉로 30',
+    lat: 37.4951,
+    lng: 127.0549,
+    comment: '조금 걸어야 하지만 도넛 맛집',
+    active: true,
+    weight: 1,
+    recommended: true,
+  },
+];
+
+// ── 카카오 CE7(카페) 검색 결과 mock ──────────────────────────
+// 관리자DB(coffee)에 없는 일반 카페. category_name은 카카오 CE7 형식.
+
+export const MOCK_KAKAO_CAFES: KakaoPlace[] = [
+  place('c1', '스타벅스 도곡점', '음식점 > 카페 > 커피전문점', '서울 강남구 도곡동', 127.0525, 37.4895, '1522-3232'),
+  place('c2', '투썸플레이스 매봉역', '음식점 > 카페 > 커피전문점 > 투썸플레이스', '서울 강남구 도곡동', 127.0541, 37.4884, '02-576-3030'),
+  place('c3', '파리바게뜨 군인공제회관점', '음식점 > 카페 > 제과,베이커리', '서울 강남구 남부순환로', 127.0520, 37.4899, '02-572-4040'),
+  place('c4', '노티드 도넛 도곡', '음식점 > 카페 > 도넛', '서울 강남구 도곡동', 127.0537, 37.4907, ''),
+  place('c5', '설빙 매봉', '음식점 > 카페 > 빙수', '서울 강남구 도곡동', 127.0512, 37.4881, '02-577-5050'),
+  place('c6', '공차 도곡', '음식점 > 카페 > 버블티,음료', '서울 강남구 남부순환로', 127.0533, 37.4886, ''),
+  // ~700m (500m 밖, 1km 내) — 확장 시연
+  place('c7', '블루보틀 양재', '음식점 > 카페 > 커피전문점', '서울 서초구 양재동', 127.0498, 37.4935, ''),
+  // 서비스 지역 밖(관악) — 확장해도 bbox로 걸러짐 시연 대비(1km보다 훨씬 멂이라 반경으로도 컷)
+  place('c8', '관악 골목카페', '음식점 > 카페 > 커피전문점', '서울 관악구 봉천동', 126.9412, 37.4813, ''),
+];

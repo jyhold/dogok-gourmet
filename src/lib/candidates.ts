@@ -1,26 +1,30 @@
-import type { Candidate, Coords, DistanceMode, MealType, Mode, Restaurant } from './types';
-import { DISTANCE_METERS } from './types';
+import type { Cafe, Candidate, Coords, DistanceMode, Mode, Restaurant } from './types';
+import {
+  DISTANCE_METERS,
+  DESSERT_RADIUS_M,
+  DESSERT_RADIUS_EXPANDED_M,
+  DESSERT_MIN_RESULTS,
+} from './types';
 import { loadRestaurants } from './sheet';
+import { loadCafes } from './coffeeSheet';
 import { searchNearby } from './kakao';
 import type { KakaoPlace } from './mockData';
 import {
   estimatePriceTier,
   mapKakaoCategory,
-  LUNCH_ONLY_SUBS,
+  mapKakaoCafe,
+  DESSERT_MAIN,
   SOLO_EXCLUDED_SUBS,
   SOLO_FRIENDLY_SUBS,
-  TEAM_DINNER_SUBS,
 } from './categories';
 import { haversineMeters, inAllowedDistrict, reachableInMode, walkMinutes } from './geo';
 
-// ── 모드 → 식사시간대 매핑 ─────────────────────────────────
-function mealOf(mode: Mode): MealType {
-  return mode.startsWith('lunch') ? '점심' : '저녁';
-}
+// ── 점심 모드는 항상 '점심' 시간대 (저녁 폐지) ──────────────
+const LUNCH_MEAL = '점심' as const;
 
-/** meal_type 필드가 모드와 호환되는지 (둘다는 항상 통과) */
-function mealMatches(rMeal: MealType, want: MealType): boolean {
-  return rMeal === '둘다' || rMeal === want;
+/** meal_type 필드가 점심과 호환되는지 (둘다·점심 통과, 저녁 제외) */
+function lunchMealMatches(rMeal: Restaurant['mealType']): boolean {
+  return rMeal === '둘다' || rMeal === LUNCH_MEAL;
 }
 
 // ── 관리자DB Restaurant → Candidate ────────────────────────
@@ -102,21 +106,18 @@ function sameCore(a: string, b: string): boolean {
 
 export interface BuildResult {
   candidates: Candidate[];
-  /** 팀회식에서 단체석 보조 후보까지 포함해야 했는지 */
-  usedFallback: boolean;
 }
 
 /**
- * 모드별 후보 구성 (기획서 §7.2).
- * center: 기준 좌표 / mode: 4종 / distance: 이동수단(반경·행정구역)
+ * 점심 모드 후보 구성 (기획서 §7.2). 시작점=군인공제회관 고정.
+ * mode: lunch-solo | lunch-group / distance: 이동수단(반경·행정구역)
  */
 export async function buildCandidates(
   center: Coords,
-  mode: Mode,
+  mode: Extract<Mode, 'lunch-solo' | 'lunch-group'>,
   distance: DistanceMode,
 ): Promise<BuildResult> {
   const radius = DISTANCE_METERS[distance];
-  const meal = mealOf(mode);
 
   // 1) 카카오 반경 검색 → 행정구역 필터 → 후보화
   const rawKakao = await searchNearby(center, radius);
@@ -125,69 +126,135 @@ export async function buildCandidates(
     .map((p) => kakaoToCandidate(p, center))
     .filter((c) => reachableInMode(c, distance));
 
-  // 2) 관리자DB 로드 → 반경 + meal_type 매칭 (행정구역 필터 미적용: 예외 등록 허용)
+  // 2) 관리자DB 로드 → 반경 + 점심 meal_type 매칭 (행정구역 필터 미적용: 예외 등록 허용)
   const restaurants = await loadRestaurants();
   let curatedCands = restaurants
-    .filter((r) => mealMatches(r.mealType, meal))
+    .filter((r) => lunchMealMatches(r.mealType))
     .map((r) => curatedToCandidate(r, center))
     .filter((c) => reachableInMode(c, distance));
 
-  // 점심 모드('기타' 대분류 제외): 치킨·호프·매칭 실패 등은 점심 룰렛에 안 나오게
-  if (mode === 'lunch-solo' || mode === 'lunch-group') {
-    const notEtc = (c: Candidate) => c.categoryMain !== '기타';
-    kakaoCands = kakaoCands.filter(notEtc);
-    curatedCands = curatedCands.filter(notEtc);
-  }
-
-  let usedFallback = false;
+  // 점심 공통: '기타' 대분류 제외 (치킨·호프·매칭 실패는 점심 룰렛에 미출현)
+  const notEtc = (c: Candidate) => c.categoryMain !== '기타';
+  kakaoCands = kakaoCands.filter(notEtc);
+  curatedCands = curatedCands.filter(notEtc);
 
   // 3) 모드별 후보 구성
-  switch (mode) {
-    case 'lunch-solo': {
-      // 혼밥: 다인 전제 제외, 혼밥 친화 가중치↑, solo_friendly 추가 가중치
-      curatedCands = curatedCands
-        .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub) || c.soloFriendly)
-        .map((c) => ({
-          ...c,
-          weight:
-            c.weight *
-            (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1) *
-            (c.soloFriendly ? 2 : 1),
-        }));
-      kakaoCands = kakaoCands
-        .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub))
-        .map((c) => ({
-          ...c,
-          weight: c.weight * (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1),
-        }));
-      break;
-    }
-    case 'lunch-group': {
-      // 점심약속: 전 카테고리, 예산 필터는 프론트에서. 기존 기본 동작.
-      break;
-    }
-    case 'dinner-flash': {
-      // 번개모임: 예산 무관, 점심형 카테고리는 저녁에 가중치↓
-      const softenLunchOnly = (c: Candidate): Candidate =>
-        LUNCH_ONLY_SUBS.has(c.categorySub) ? { ...c, weight: c.weight * 0.4 } : c;
-      curatedCands = curatedCands.map(softenLunchOnly);
-      kakaoCands = kakaoCands.map(softenLunchOnly);
-      break;
-    }
-    case 'dinner-team': {
-      // 팀회식: 관리자DB 중 group_seating=TRUE만 메인 후보
-      const teamMain = curatedCands.filter((c) => c.groupSeating);
-      curatedCands = teamMain;
-      // 카카오는 회식형 카테고리만 '단체석 미확인' 보조 후보
-      kakaoCands = kakaoCands
-        .filter((c) => TEAM_DINNER_SUBS.has(c.categorySub))
-        .map((c) => ({ ...c, groupUnconfirmed: true, weight: c.weight * 0.5 }));
-      // 후보 3곳 미만이면 보조 후보 포함 플래그 (프론트 안내용)
-      if (teamMain.length < 3) usedFallback = true;
-      break;
-    }
+  if (mode === 'lunch-solo') {
+    // 혼밥: 다인 전제 제외, 혼밥 친화 가중치↑, solo_friendly 추가 가중치
+    curatedCands = curatedCands
+      .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub) || c.soloFriendly)
+      .map((c) => ({
+        ...c,
+        weight:
+          c.weight *
+          (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1) *
+          (c.soloFriendly ? 2 : 1),
+      }));
+    kakaoCands = kakaoCands
+      .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub))
+      .map((c) => ({
+        ...c,
+        weight: c.weight * (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1),
+      }));
   }
+  // lunch-group: 전 카테고리, 예산 필터는 프론트에서 (기본 동작)
 
   const merged = dedupe(curatedCands, kakaoCands);
-  return { candidates: merged, usedFallback };
+  return { candidates: merged };
+}
+
+// ── 후식(coffee) Cafe → Candidate ──────────────────────────
+function cafeCuratedToCandidate(c: Cafe, center: Coords): Candidate {
+  const straight = haversineMeters(center, { lat: c.lat, lng: c.lng });
+  return {
+    id: `cafe:${c.name}`,
+    name: c.name,
+    categoryMain: DESSERT_MAIN,
+    categorySub: c.categorySub,
+    curated: true,
+    lat: c.lat,
+    lng: c.lng,
+    address: c.address,
+    distanceM: Math.round(straight),
+    walkMinutes: walkMinutes(straight),
+    priceTier: '보통',
+    priceEstimated: false,
+    priceNote: c.priceNote || undefined,
+    signatureMenu: c.signatureMenu || undefined,
+    comment: c.comment || undefined,
+    phone: c.phone,
+    visited: c.visited,
+    recommended: c.recommended,
+    weight: c.weight,
+  };
+}
+
+function cafeKakaoToCandidate(p: KakaoPlace, center: Coords): Candidate {
+  const lat = Number(p.y);
+  const lng = Number(p.x);
+  const mapped = mapKakaoCafe(p.category_name);
+  const straight = haversineMeters(center, { lat, lng });
+  return {
+    id: `kakao:${p.id}`,
+    name: p.place_name,
+    categoryMain: mapped.main,
+    categorySub: mapped.sub,
+    curated: false,
+    lat,
+    lng,
+    address: p.road_address_name || p.address_name,
+    distanceM: Math.round(straight),
+    walkMinutes: walkMinutes(straight),
+    priceTier: '보통',
+    priceEstimated: true,
+    phone: p.phone || undefined,
+    weight: 1,
+    kakaoPlaceUrl: p.place_url,
+  };
+}
+
+export interface DessertResult {
+  candidates: Candidate[];
+  /** 반경을 기본(500m)에서 확장했는지 (결과 부족) */
+  expanded: boolean;
+  /** 실제 사용 반경 (m) */
+  radius: number;
+}
+
+/** 지정 반경으로 후식 후보 1회 구성 (카카오 CE7 + coffee 시트 + 병합) */
+async function buildDessertAtRadius(center: Coords, radius: number): Promise<Candidate[]> {
+  // 1) 카카오 CE7(카페) 반경 검색 → 후보화 → 직선거리 컷 (행정구역 필터 미적용)
+  const rawKakao = await searchNearby(center, radius, 'CE7');
+  const kakaoCands = rawKakao
+    .map((p) => cafeKakaoToCandidate(p, center))
+    .filter((c) => c.distanceM <= radius);
+
+  // 2) coffee 시트 → 후보화 → 직선거리 컷
+  const cafes = await loadCafes();
+  const curatedCands = cafes
+    .map((c) => cafeCuratedToCandidate(c, center))
+    .filter((c) => c.distanceM <= radius);
+
+  return dedupe(curatedCands, kakaoCands);
+}
+
+/**
+ * 후식 모드 후보 구성 — 현재 위치 반경 500m.
+ * 결과가 부족(DESSERT_MIN_RESULTS 미만)하면 1km까지 1회 자동 확장.
+ */
+export async function buildDessertCandidates(
+  center: Coords,
+  radius: number = DESSERT_RADIUS_M,
+): Promise<DessertResult> {
+  let candidates = await buildDessertAtRadius(center, radius);
+  let expanded = false;
+  let usedRadius = radius;
+
+  if (candidates.length < DESSERT_MIN_RESULTS && radius === DESSERT_RADIUS_M) {
+    usedRadius = DESSERT_RADIUS_EXPANDED_M;
+    candidates = await buildDessertAtRadius(center, usedRadius);
+    expanded = true;
+  }
+
+  return { candidates, expanded, radius: usedRadius };
 }

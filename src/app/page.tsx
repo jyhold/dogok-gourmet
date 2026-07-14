@@ -8,7 +8,8 @@ import SlotMachine from '@/components/SlotMachine';
 import ResultCard from '@/components/ResultCard';
 import Mascot from '@/components/Mascot';
 import DotIcon from '@/components/DotIcon';
-import { applyFilters, boostVisited, weightedPick } from '@/lib/roulette';
+import { applyFilters, boostVisited, boostRecommended, weightedPick } from '@/lib/roulette';
+import { COMPANY_COORDS } from '@/lib/geo';
 
 type Screen = 'mode' | 'filter' | 'spinning' | 'result';
 
@@ -21,9 +22,32 @@ const DEFAULT_FILTER: FilterState = {
   prioritizeVisited: false,
 };
 
-function defaultMeal(): 'lunch' | 'dinner' {
+function defaultMeal(): 'lunch' | 'dessert' {
   const h = new Date().getHours();
-  return h < 14 ? 'lunch' : 'dinner';
+  // 오후 1시 이후엔 식후 후식 탭을 기본으로
+  return h < 13 ? 'lunch' : 'dessert';
+}
+
+/**
+ * 브라우저 현재 위치 조회 (후식 모드용). 거부·실패·타임아웃 시 군인공제회관 폴백.
+ * @returns 좌표 + 폴백 여부
+ */
+function getPosition(): Promise<{ coords: { lat: number; lng: number }; fallback: boolean }> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve({ coords: COMPANY_COORDS, fallback: true });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          fallback: false,
+        }),
+      () => resolve({ coords: COMPANY_COORDS, fallback: true }),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  });
 }
 
 // ── 날씨 기반 추천 메뉴 (메인 하단 마스코트 말풍선) ──
@@ -143,15 +167,32 @@ export default function Home() {
     setCandidates([]);
   };
 
-  // ── 후보 로드 (모드·거리 조합. 시작점은 서버가 군인공제회관 고정) ──
+  // ── 후보 로드 ──
+  // 점심: 서버가 군인공제회관 고정 시작점 사용 (/api/nearby).
+  // 후식: 브라우저 현재 위치 반경 500m (/api/dessert). 권한 거부 시 군인공제회관 폴백.
   const loadCandidates = useCallback(async (): Promise<Candidate[]> => {
     if (!mode) return [];
+
+    if (mode === 'dessert') {
+      const { coords, fallback } = await getPosition();
+      const params = new URLSearchParams({
+        lat: String(coords.lat),
+        lng: String(coords.lng),
+      });
+      const res = await fetch(`/api/dessert?${params}`);
+      const data = await res.json();
+      if (fallback || data.locationFallback) {
+        showToast('📍 위치를 못 받아 군인공제회관 기준으로 찾았어요', false);
+      } else if (data.expanded) {
+        showToast('근처가 한산해 반경을 넓혔어요', false);
+      }
+      setCandidates(data.candidates ?? []);
+      return data.candidates ?? [];
+    }
+
     const params = new URLSearchParams({ mode, distance: filter.distance });
     const res = await fetch(`/api/nearby?${params}`);
     const data = await res.json();
-    if (mode === 'dinner-team' && data.teamFallback) {
-      showToast('단체석 등록 업장이 적어 미확인 보조 후보를 포함했어요', false);
-    }
     setCandidates(data.candidates ?? []);
     return data.candidates ?? [];
   }, [mode, filter.distance]);
@@ -167,9 +208,18 @@ export default function Home() {
       }
       setLoading(false);
 
+      // 예산 필터는 점심 전용. 후식은 미적용(null).
+      const priceTier =
+        mode === 'lunch-solo' || mode === 'lunch-group' ? filter.priceTier : null;
+      // 우선 부스트: 후식=추천(recommended), 그 외=방문(visited)
+      const boost = (list: Candidate[]) =>
+        mode === 'dessert'
+          ? boostRecommended(list, filter.prioritizeVisited)
+          : boostVisited(list, filter.prioritizeVisited);
+
       const available = applyFilters(pool, {
         excludedSubs: filter.excludedSubs,
-        priceTier: mode === 'lunch-solo' || mode === 'lunch-group' ? filter.priceTier : null,
+        priceTier,
         seenIds: prevSeen,
       });
 
@@ -178,13 +228,12 @@ export default function Home() {
         if (prevSeen.length > 0) {
           const reset = applyFilters(pool, {
             excludedSubs: filter.excludedSubs,
-            priceTier:
-              mode === 'lunch-solo' || mode === 'lunch-group' ? filter.priceTier : null,
+            priceTier,
             seenIds: [],
           });
           if (reset.length > 0) {
             setSeenIds([]);
-            const w = weightedPick(boostVisited(reset, filter.prioritizeVisited))!;
+            const w = weightedPick(boost(reset))!;
             setWinner(w);
             setSeenIds([w.id]);
             setSpinKey((k) => k + 1);
@@ -197,7 +246,7 @@ export default function Home() {
         return;
       }
 
-      const w = weightedPick(boostVisited(available, filter.prioritizeVisited))!;
+      const w = weightedPick(boost(available))!;
       setWinner(w);
       setSeenIds((s) => [...s, w.id]);
       setSpinKey((k) => k + 1);

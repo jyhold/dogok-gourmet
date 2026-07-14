@@ -1,5 +1,17 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔄 v1.12 변경 (2026-07-14) — 저녁 폐지 → 후식(위치기반) 개편
+- **최상위 분기 점심/저녁 → 점심/후식.** 저녁(번개모임·팀회식) 완전 제거. 후식은 하위 분기 없이 단일 모드.
+- **후식 = 위치기반 반경 500m** (부족 시 1km 자동 확장). 점심 원칙(군인공제회관 고정)의 유일한 예외 — 브라우저 Geolocation 사용, 권한 거부/실패 시 `COMPANY_COORDS` 폴백 + 안내 토스트.
+- **새 `coffee` 시트 + 전용 스키마** (`src/lib/coffeeSheet.ts`, `loadCafes`). 헤더: `name, category_sub, signature_menu, price_note, address, lat, lng, comment, active, weight, phone, visited, recommended`. 대분류는 로더가 '후식' 고정. 평점(rating) 대신 **`recommended`(추천 T/F)**.
+- **후식 카테고리 5종** (`categories.ts` `DESSERT_SUBS`): 커피·음료/베이커리·빵/케이크·디저트/도넛·와플/아이스크림·빙수. 카카오 CE7 매핑 `mapKakaoCafe`(실패 시 커피·음료). 도트 아이콘 5종 신규(`coffee/bakery/cake/donut/icecream`, gen-icons.mjs, PALETTE에 커피색 `C` 추가).
+- **카카오 로더 groupCode 파라미터화** (`searchNearby(center, radius, groupCode)`): 점심=FD6, 후식=CE7. gridKey에 groupCode 포함(캐시 분리).
+- **신규 `/api/dessert?lat=&lng=`** (`inServiceArea` 가드, 폴백 판정). `/api/nearby`는 점심 전용(`VALID_MODES` 축소).
+- **UI**: `ModeSelect` 탭 점심/후식(후식은 단일 카드 `grid-1`), `FilterPanel` 후식은 예산·거리 숨김+후식 제외칩+'추천 우선' 라벨, `ResultCard` 후식은 추천/방문 배지(별점 X)·팀회식 UI 제거. `page.tsx` `getPosition`+dessert 분기+`boostRecommended`.
+- **테스트 19개** (dinner-team 테스트 교체): `mapKakaoCafe`·`boostRecommended`·`buildDessertCandidates`(500m·관악 제외) 추가.
+- mock: `MOCK_CAFES`(5), `MOCK_KAKAO_CAFES`(8) 추가. tsc·npm test 그린.
+- **배포 전 필요**: 실서비스에서 구글 시트에 `coffee` 탭 생성 + 헤더행 입력(비어있으면 카카오 CE7 결과만 노출).
+
 ## 🔄 v1.11 변경 (2026-07-13)
 - **분식 하위 '만두' 추가** — `categories.ts`(트리+카카오 매핑 만두/교자/왕만두+예산 가성비+혼밥친화), 도트 아이콘 `mandu`(gen-icons.mjs), `icons.ts` 매핑, docs/plan.md.
 - **관리자DB 이동수단 오버라이드 `access_mode`(시트 T열, 1=도보/2=따릉이/3=택시)** — 언덕·도로 사정으로 직선거리 판정이 어긋나는 곳을 관리자가 직접 지정. **값 있으면 직선거리 무시**하고 `선택 등급 ≥ access_mode`로 노출, null이면 기존 직선거리. curated 후보에만 적용(카카오는 값 없어 자동 직선거리).

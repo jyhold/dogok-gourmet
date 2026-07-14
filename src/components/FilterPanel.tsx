@@ -1,7 +1,7 @@
 'use client';
 
 import type { DistanceMode, Mode, PriceTier } from '@/lib/types';
-import { CATEGORY_TREE } from '@/lib/categories';
+import { CATEGORY_TREE, DESSERT_MAIN, DESSERT_SUBS } from '@/lib/categories';
 
 export interface FilterState {
   priceTier: PriceTier | null;
@@ -30,7 +30,8 @@ const DIST_OPTIONS: { d: DistanceMode; label: string }[] = [
 ];
 
 export default function FilterPanel({ mode, value, onChange }: Props) {
-  // 번개모임/팀회식은 예산 필터 숨김/잠금 (기획서 §2 #9)
+  const isDessert = mode === 'dessert';
+  // 예산 필터는 점심 전용. 후식은 예산·거리 필터 모두 숨김(반경 500m 고정).
   const showPrice = mode === 'lunch-solo' || mode === 'lunch-group';
 
   const toggleSub = (sub: string) => {
@@ -54,8 +55,12 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
       >
         <span className="check-box">{value.prioritizeVisited ? '✓' : ''}</span>
         <span className="check-text">
-          ⭐ 미식가 인증 맛집 우선
-          <span className="check-desc">직접 방문·검증한 맛집이 더 잘 나와요</span>
+          {isDessert ? '👍 미식가 추천 우선' : '⭐ 미식가 인증 맛집 우선'}
+          <span className="check-desc">
+            {isDessert
+              ? '미식가가 방문 후 추천한 곳이 더 잘 나와요'
+              : '직접 방문·검증한 맛집이 더 잘 나와요'}
+          </span>
         </span>
       </button>
 
@@ -81,39 +86,37 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
           </div>
         </>
       )}
-      {mode === 'dinner-team' && (
-        <p className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
-          🍻 팀회식: 인당 5만+α · 단체석 업장만 후보
-        </p>
-      )}
-      {mode === 'dinner-flash' && (
-        <p className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
-          ⚡ 번개모임: 가격 무관 전체 후보
-        </p>
-      )}
 
-      <div className="section-label">🚦 거리 (이동수단)</div>
-      <div className="row">
-        {DIST_OPTIONS.map((o) => (
-          <button
-            key={o.d}
-            className="chip"
-            aria-pressed={value.distance === o.d}
-            onClick={() => onChange({ ...value, distance: o.d })}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
+      {isDessert ? (
+        <p className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
+          🍰 후식: 현재 위치 반경 500m 카페·디저트 (부족하면 자동으로 넓혀요)
+        </p>
+      ) : (
+        <>
+          <div className="section-label">🚦 거리 (이동수단)</div>
+          <div className="row">
+            {DIST_OPTIONS.map((o) => (
+              <button
+                key={o.d}
+                className="chip"
+                aria-pressed={value.distance === o.d}
+                onClick={() => onChange({ ...value, distance: o.d })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="section-label">🚫 제외 메뉴 (탭해서 빼기)</div>
-      {CATEGORY_TREE.map((cat) => (
-        <div key={cat.main} style={{ marginBottom: 8 }}>
+      {isDessert ? (
+        <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginBottom: 4 }}>
-            {cat.main}
+            {DESSERT_MAIN}
           </div>
           <div className="row">
-            {cat.subs.map((sub) => (
+            {DESSERT_SUBS.map((sub) => (
               <button
                 key={sub}
                 className="chip excluded"
@@ -125,7 +128,27 @@ export default function FilterPanel({ mode, value, onChange }: Props) {
             ))}
           </div>
         </div>
-      ))}
+      ) : (
+        CATEGORY_TREE.map((cat) => (
+          <div key={cat.main} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginBottom: 4 }}>
+              {cat.main}
+            </div>
+            <div className="row">
+              {cat.subs.map((sub) => (
+                <button
+                  key={sub}
+                  className="chip excluded"
+                  aria-pressed={value.excludedSubs.includes(sub)}
+                  onClick={() => toggleSub(sub)}
+                >
+                  {sub}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
