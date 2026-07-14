@@ -1,16 +1,23 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔧 v1.12 후속 (2026-07-14) — 후식 카드 UI + 아아INDEX
+- **후식 결과 카드 우상단 코너** 신설(`ResultCard` `result-head`/`dessert-corner`, globals.css): 초록 '👍 미식가 추천'/'✅ 직접 방문' 배지를 하단→우상단으로 이동 + **`아아INDEX {값}원`** 표시.
+- **`아아INDEX` 필드**(아이스아메리카노 가격): `Cafe`·`Candidate` `iceAmericano?`, `coffeeSheet` `parsePrice`(콤마·원 제거), `candidates` 전달, coffee 시트 **14번째 열**(`classify` `COFFEE_SHEET_HEADER`, `buildCafeRow`, `sheetSync` ping, `seed-coffee.mts`, mock 값). **필터 UI는 미구현** — 값 누적 후 별도 반영 예정.
+- 테스트 22개. tsc·build 그린.
+
 ## 🔄 v1.12 변경 (2026-07-14) — 저녁 폐지 → 후식(위치기반) 개편
 - **최상위 분기 점심/저녁 → 점심/후식.** 저녁(번개모임·팀회식) 완전 제거. 후식은 하위 분기 없이 단일 모드.
-- **후식 = 위치기반 반경 500m** (부족 시 1km 자동 확장). 점심 원칙(군인공제회관 고정)의 유일한 예외 — 브라우저 Geolocation 사용, 권한 거부/실패 시 `COMPANY_COORDS` 폴백 + 안내 토스트.
+- **후식 = 위치기반 반경** — 현재 위치 기준 **300m**, 군인공제회관 폴백 기준 **500m** (둘 다 부족 시 1km 자동 확장). 점심 원칙(군인공제회관 고정)의 유일한 예외 — 브라우저 Geolocation 사용, 권한 거부/실패 시 `COMPANY_COORDS` 500m 폴백 + 안내 토스트. (반경 상수 `DESSERT_RADIUS_LOCATION_M`/`DESSERT_RADIUS_COMPANY_M`, 라우트에서 소스별 분기)
 - **새 `coffee` 시트 + 전용 스키마** (`src/lib/coffeeSheet.ts`, `loadCafes`). 헤더: `name, category_sub, signature_menu, price_note, address, lat, lng, comment, active, weight, phone, visited, recommended`. 대분류는 로더가 '후식' 고정. 평점(rating) 대신 **`recommended`(추천 T/F)**.
 - **후식 카테고리 5종** (`categories.ts` `DESSERT_SUBS`): 커피·음료/베이커리·빵/케이크·디저트/도넛·와플/아이스크림·빙수. 카카오 CE7 매핑 `mapKakaoCafe`(실패 시 커피·음료). 도트 아이콘 5종 신규(`coffee/bakery/cake/donut/icecream`, gen-icons.mjs, PALETTE에 커피색 `C` 추가).
 - **카카오 로더 groupCode 파라미터화** (`searchNearby(center, radius, groupCode)`): 점심=FD6, 후식=CE7. gridKey에 groupCode 포함(캐시 분리).
 - **신규 `/api/dessert?lat=&lng=`** (`inServiceArea` 가드, 폴백 판정). `/api/nearby`는 점심 전용(`VALID_MODES` 축소).
 - **UI**: `ModeSelect` 탭 점심/후식(후식은 단일 카드 `grid-1`), `FilterPanel` 후식은 예산·거리 숨김+후식 제외칩+'추천 우선' 라벨, `ResultCard` 후식은 추천/방문 배지(별점 X)·팀회식 UI 제거. `page.tsx` `getPosition`+dessert 분기+`boostRecommended`.
-- **테스트 19개** (dinner-team 테스트 교체): `mapKakaoCafe`·`boostRecommended`·`buildDessertCandidates`(500m·관악 제외) 추가.
-- mock: `MOCK_CAFES`(5), `MOCK_KAKAO_CAFES`(8) 추가. tsc·npm test 그린.
-- **배포 전 필요**: 실서비스에서 구글 시트에 `coffee` 탭 생성 + 헤더행 입력(비어있으면 카카오 CE7 결과만 노출).
+- **테스트** (dinner-team 테스트 교체): `mapKakaoCafe`·`boostRecommended`·`buildDessertCandidates`(위치 300m·폴백 500m·관악 제외) 추가.
+- mock: `MOCK_CAFES`(5), `MOCK_KAKAO_CAFES`(8) 추가.
+- **후식 자동 동기화**(점심DB와 동일 패턴, 기존 인프라 재활용): `src/lib/coffeeSync.ts` `syncNewCafes(1km, CE7)` → coffee 탭 append. `/api/sync`가 식당+후식 **동시 실행**(`{restaurants,coffee}`). 웹훅 URL·시크릿·CRON·cron(정오) **그대로 재사용**, payload에 `sheet:'coffee'`만 추가. `classify.ts` `buildCafeRow`+`COFFEE_SHEET_HEADER`, `pingWebhook(target)`, `/api/sync?ping=coffee`. Apps Script `doPost`는 `sheet` 파라미터 지원(미지정=restaurants, 기존 호환) — **재배포 필요**. 수동 대량 시드: `scripts/seed-coffee.mts`.
+- 테스트 20개(`buildCafeRow` 스키마 정합 추가). tsc·npm test·build 그린. mock 웹훅으로 sync E2E 확인(restaurants 9 + coffee 7 append, sheet 라우팅).
+- **배포 전 필요**: ① 구글 시트에 `coffee` 탭 생성 + 헤더행 입력, ② Apps Script `doPost` 새 버전으로 재배포. (둘 다 `docs/sheet-sync-setup.md`)
 
 ## 🔄 v1.11 변경 (2026-07-13)
 - **분식 하위 '만두' 추가** — `categories.ts`(트리+카카오 매핑 만두/교자/왕만두+예산 가성비+혼밥친화), 도트 아이콘 `mandu`(gen-icons.mjs), `icons.ts` 매핑, docs/plan.md.

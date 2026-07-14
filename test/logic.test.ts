@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { mapKakaoCategory, mapKakaoCafe, estimatePriceTier, SOLO_EXCLUDED_SUBS } from '../src/lib/categories.ts';
+import { buildCafeRow, COFFEE_SHEET_HEADER } from '../src/lib/classify.ts';
 import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, boostRecommended, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
 import { buildCandidates, buildDessertCandidates } from '../src/lib/candidates.ts';
@@ -157,4 +158,41 @@ test('buildDessertCandidates: 반경 밖(관악) 카페는 제외', async () => 
   const { candidates } = await buildDessertCandidates(COMPANY_COORDS);
   const gwanak = candidates.some((c) => c.address.includes('관악구'));
   assert.equal(gwanak, false);
+});
+
+test('buildDessertCandidates: 현재 위치 기준 300m는 더 촘촘하게 컷', async () => {
+  const { candidates, radius, expanded } = await buildDessertCandidates(COMPANY_COORDS, 300);
+  assert.equal(radius, 300);
+  assert.equal(expanded, false, 'mock 8곳이 300m 내라 확장 불필요');
+  assert.ok(candidates.length >= 3);
+  assert.ok(candidates.every((c) => c.distanceM <= 300), '모든 후보가 300m 이내');
+  // 300m 밖(예: ~311m 매봉 디저트카페, ~387m 도곡 젤라또)은 제외돼야 함
+  assert.ok(!candidates.some((c) => c.name === '매봉 디저트카페'));
+});
+
+// ── 후식 동기화: 시트 행 스키마 정합 ──
+test('buildCafeRow: 열 개수가 COFFEE_SHEET_HEADER와 일치', () => {
+  const row = buildCafeRow({
+    place_name: '테스트카페',
+    category_name: '음식점 > 카페 > 도넛',
+    address_name: '서울 강남구 도곡동',
+    road_address_name: '서울 강남구 남부순환로 2800',
+    x: '127.0529',
+    y: '37.4891',
+    phone: '02-000-0000',
+  });
+  assert.equal(row.length, COFFEE_SHEET_HEADER.length);
+  assert.equal(COFFEE_SHEET_HEADER[COFFEE_SHEET_HEADER.length - 1], '아아INDEX');
+  assert.equal(row[0], '테스트카페'); // name
+  assert.equal(row[1], '도넛·와플'); // category_sub (CE7 매핑)
+  assert.equal(row[8], 'TRUE'); // active
+  assert.equal(row[12], 'FALSE'); // recommended (기본 미추천)
+  assert.equal(row[13], ''); // 아아INDEX (동기화는 빈 값, 손 큐레이션)
+});
+
+test('buildDessertCandidates: curated 후보에 아아INDEX(iceAmericano) 전달', async () => {
+  const { candidates } = await buildDessertCandidates(COMPANY_COORDS);
+  const withAa = candidates.filter((c) => c.curated && c.iceAmericano != null);
+  assert.ok(withAa.length > 0, 'coffee 시트 아아INDEX 값이 후보에 실려야 함');
+  assert.ok(withAa.every((c) => typeof c.iceAmericano === 'number'));
 });

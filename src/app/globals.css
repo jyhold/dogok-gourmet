@@ -413,6 +413,49 @@ button {
   0% { transform: scale(0.9); }
   100% { transform: scale(1); }
 }
+/* 결과 카드 헤더: 아이콘 + 제목 + (후식) 우상단 코너 */
+.result-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.result-title {
+  flex: 1;
+  min-width: 0;
+}
+/* 후식 우상단 코너: 아아INDEX + 추천/방문 배지 세로 스택 */
+.dessert-corner {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.dessert-corner .visited-badge {
+  margin-left: 0;
+}
+.aa-index {
+  text-align: right;
+  font-family: var(--font-pixel-ko);
+  background: var(--cream);
+  border: 2px solid var(--ink);
+  box-shadow: 0 2px 0 0 var(--shadow);
+  padding: 3px 8px;
+  line-height: 1.25;
+}
+.aa-index-label {
+  display: block;
+  font-size: 9px;
+  color: var(--ink-soft);
+  letter-spacing: 0.5px;
+}
+.aa-index-val {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tomato-dark);
+}
 .result-card .cat {
   font-family: var(--font-body);
   font-size: 12px;

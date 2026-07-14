@@ -169,7 +169,7 @@ export default function Home() {
 
   // ── 후보 로드 ──
   // 점심: 서버가 군인공제회관 고정 시작점 사용 (/api/nearby).
-  // 후식: 브라우저 현재 위치 반경 500m (/api/dessert). 권한 거부 시 군인공제회관 폴백.
+  // 후식: 브라우저 현재 위치 반경 300m (/api/dessert). 권한 거부 시 군인공제회관 500m 폴백.
   const loadCandidates = useCallback(async (): Promise<Candidate[]> => {
     if (!mode) return [];
 
