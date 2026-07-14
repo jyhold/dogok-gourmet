@@ -6,6 +6,7 @@ import { buildCafeRow, COFFEE_SHEET_HEADER } from '../src/lib/classify.ts';
 import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, boostRecommended, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
 import { buildCandidates, buildDessertCandidates } from '../src/lib/candidates.ts';
+import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
 import type { Candidate } from '../src/lib/types.ts';
 
 // ── 카테고리 매핑 (병목 7) ──
@@ -195,4 +196,32 @@ test('buildDessertCandidates: curated 후보에 아아INDEX(iceAmericano) 전달
   const withAa = candidates.filter((c) => c.curated && c.iceAmericano != null);
   assert.ok(withAa.length > 0, 'coffee 시트 아아INDEX 값이 후보에 실려야 함');
   assert.ok(withAa.every((c) => typeof c.iceAmericano === 'number'));
+});
+
+// ── 동기화 중복 판정 (syncDedupe) — 찌개의민족 재추가 버그 회귀 ──
+test('isDuplicatePlace: 이름 완전일치는 좌표가 멀어도 중복 (기존 50m 게이트 버그 회귀)', () => {
+  // 시트 좌표와 카카오 좌표가 ~200m 차이나던 케이스 — 이전엔 신규로 재추가됨
+  const existing = [{ name: '찌개의민족', lat: 37.4941, lng: 127.0621 }];
+  const cand = { name: '찌개의민족', lat: 37.4959, lng: 127.0621 }; // 약 200m
+  assert.ok(haversineMeters({ lat: 37.4941, lng: 127.0621 }, cand) > DUP_DISTANCE_M);
+  assert.equal(isDuplicatePlace(cand, existing), true);
+});
+test('isDuplicatePlace: 좌표 없는 기존 행(파서 스킵)도 이름 완전일치면 중복', () => {
+  const existing = [{ name: '찌개의민족' }]; // lat/lng 없음 (좌표 누락으로 파서가 스킵한 행)
+  assert.equal(isDuplicatePlace({ name: '찌개의민족', lat: 37.5, lng: 127.03 }, existing), true);
+});
+test('isDuplicatePlace: 부분일치는 150m 이내만 중복(지점 구분)', () => {
+  const existing = [{ name: '메가커피', lat: 37.4941, lng: 127.0621 }];
+  const near = { name: '메가커피 도곡', lat: 37.4945, lng: 127.0621 }; // ~44m, 부분일치
+  const far = { name: '메가커피 도곡', lat: 37.499, lng: 127.0621 }; // ~545m
+  assert.equal(isDuplicatePlace(near, existing), true);
+  assert.equal(isDuplicatePlace(far, existing), false);
+});
+test('isDuplicatePlace: 다른 상호는 중복 아님', () => {
+  const existing = [{ name: '찌개의민족', lat: 37.4941, lng: 127.0621 }];
+  assert.equal(isDuplicatePlace({ name: '북창동순두부', lat: 37.4941, lng: 127.0621 }, existing), false);
+});
+test('normName: 지점 접미사·공백 제거', () => {
+  assert.equal(normName('찌개의민족 강남점'), '찌개의민족강남');
+  assert.equal(normName('스타벅스 본점'), '스타벅스');
 });

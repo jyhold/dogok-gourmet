@@ -1,5 +1,15 @@
 # 진행 상황 (세션 인수인계)
 
+## 🐛 v1.12 버그픽스 (2026-07-14) — 동기화 중복 재추가 (`찌개의민족`)
+- **증상**: 이미 시트에 있는 매장이 매일 동기화에서 중복 제거되지 않고 하단에 재추가됨.
+- **원인**: 중복 판정이 `(이름 관련) AND (좌표 50m 이내)`를 모두 요구 → ① 시트/카카오 좌표가 50m만 어긋나도(수기 좌표·다른 지오코딩) 놓침, ② 좌표·카테고리 누락으로 파서(`rowToRestaurant`)에서 스킵된 행은 `loadRestaurants()` 비교 대상에서 빠져 매일 재추가.
+- **수정**(`src/lib/syncDedupe.ts` 신설, 식당·후식 동기화 공용):
+  - **정규화 이름 완전일치 → 거리 무관 중복** (좌표 없는 스킵 행까지 커버).
+  - 이름 부분일치(지점 구분)는 좌표 허용치 **50m → 150m** 완화.
+  - `sheet.ts` `loadRestaurantNames()` / `coffeeSheet.ts` `loadCafeNames()` 신설 — **원본 CSV 상호명(스킵 행 포함)** 을 dedup 대상에 합류(원본 행 캐시 공유로 추가 fetch 없음).
+  - `sheetSync`·`coffeeSync`가 공용 `isDuplicatePlace` 사용. 테스트 5개 추가(총 27).
+
+
 ## 🔧 v1.12 후속 (2026-07-14) — 후식 카드 UI + 아아INDEX
 - **후식 결과 카드 우상단 코너** 신설(`ResultCard` `result-head`/`dessert-corner`, globals.css): 초록 '👍 미식가 추천'/'✅ 직접 방문' 배지를 하단→우상단으로 이동 + **`아아INDEX {값}원`** 표시.
 - **`아아INDEX` 필드**(아이스아메리카노 가격): `Cafe`·`Candidate` `iceAmericano?`, `coffeeSheet` `parsePrice`(콤마·원 제거), `candidates` 전달, coffee 시트 **14번째 열**(`classify` `COFFEE_SHEET_HEADER`, `buildCafeRow`, `sheetSync` ping, `seed-coffee.mts`, mock 값). **필터 UI는 미구현** — 값 누적 후 별도 반영 예정.

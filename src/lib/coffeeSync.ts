@@ -3,8 +3,9 @@
 // 웹훅·시크릿·CRON은 식당 동기화와 공용. append 대상 탭만 'coffee'로 지정.
 import { COMPANY_COORDS, haversineMeters } from './geo';
 import { searchNearby } from './kakao';
-import { loadCafes } from './coffeeSheet';
+import { loadCafes, loadCafeNames } from './coffeeSheet';
 import { buildCafeRow } from './classify';
+import { isDuplicatePlace, type KnownPlace } from './syncDedupe';
 
 export interface CoffeeSyncResult {
   scanned: number; // 카카오 CE7에서 훑은 수
@@ -12,11 +13,6 @@ export interface CoffeeSyncResult {
   added: number; // 실제 append된 수
   skipped: number; // 중복/반경 밖 제외 수
   error?: string;
-}
-
-/** 상호 핵심어(지점명 제거) 정규화 — 중복 판정용 */
-function normName(s: string): string {
-  return s.replace(/\s|점$|본점|지점|역점/g, '');
 }
 
 /**
@@ -31,10 +27,17 @@ export async function syncNewCafes(radiusM = 1000): Promise<CoffeeSyncResult> {
     return { scanned: 0, fresh: 0, added: 0, skipped: 0, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
   }
 
-  const [kakao, existing] = await Promise.all([
+  const [kakao, parsed, allNames] = await Promise.all([
     searchNearby(COMPANY_COORDS, radiusM, 'CE7'),
     loadCafes(),
+    loadCafeNames(),
   ]);
+
+  // 중복 비교 대상: 파싱본(좌표 O) + 원본 상호명(좌표 없는 스킵 행까지 커버)
+  const existing: KnownPlace[] = [
+    ...parsed.map((c) => ({ name: c.name, lat: c.lat, lng: c.lng })),
+    ...allNames.map((name) => ({ name })),
+  ];
 
   let skipped = 0;
   const rows: string[][] = [];
@@ -49,15 +52,8 @@ export async function syncNewCafes(radiusM = 1000): Promise<CoffeeSyncResult> {
       skipped++;
       continue;
     }
-    // 시트에 이미 있으면(이름+50m) 중복 → 제외
-    const dup = existing.some(
-      (c) =>
-        haversineMeters({ lat: c.lat, lng: c.lng }, { lat, lng }) <= 50 &&
-        (c.name.includes(p.place_name) ||
-          p.place_name.includes(c.name) ||
-          normName(c.name) === normName(p.place_name)),
-    );
-    if (dup) {
+    // 시트에 이미 있으면 중복 → 제외 (이름 완전일치=거리 무관, 부분일치=150m)
+    if (isDuplicatePlace({ name: p.place_name, lat, lng }, existing)) {
       skipped++;
       continue;
     }
