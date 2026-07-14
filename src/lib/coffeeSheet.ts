@@ -28,6 +28,15 @@ function toNumber(v: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** 가격 파싱: 콤마·원·₩·공백 제거 후 숫자. 예 '4,500원' → 4500. 빈 값·형식 오류면 undefined */
+function parsePrice(v: string | undefined): number | undefined {
+  if (v == null) return undefined;
+  const cleaned = v.replace(/[^0-9.]/g, '');
+  if (cleaned === '') return undefined;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /** CSV 한 행 → Cafe. 필수값(name/lat/lng) 누락·active=FALSE 행은 null(건너뜀). */
 function rowToCafe(row: Record<string, string>): Cafe | null {
   const name = row.name?.trim();
@@ -56,6 +65,7 @@ function rowToCafe(row: Record<string, string>): Cafe | null {
     phone: row.phone?.trim() || undefined,
     visited: truthy(row.visited),
     recommended: truthy(row.recommended),
+    iceAmericano: parsePrice(row['아아INDEX']),
   };
 }
 

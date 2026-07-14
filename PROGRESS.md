@@ -1,5 +1,10 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔧 v1.12 후속 (2026-07-14) — 후식 카드 UI + 아아INDEX
+- **후식 결과 카드 우상단 코너** 신설(`ResultCard` `result-head`/`dessert-corner`, globals.css): 초록 '👍 미식가 추천'/'✅ 직접 방문' 배지를 하단→우상단으로 이동 + **`아아INDEX {값}원`** 표시.
+- **`아아INDEX` 필드**(아이스아메리카노 가격): `Cafe`·`Candidate` `iceAmericano?`, `coffeeSheet` `parsePrice`(콤마·원 제거), `candidates` 전달, coffee 시트 **14번째 열**(`classify` `COFFEE_SHEET_HEADER`, `buildCafeRow`, `sheetSync` ping, `seed-coffee.mts`, mock 값). **필터 UI는 미구현** — 값 누적 후 별도 반영 예정.
+- 테스트 22개. tsc·build 그린.
+
 ## 🔄 v1.12 변경 (2026-07-14) — 저녁 폐지 → 후식(위치기반) 개편
 - **최상위 분기 점심/저녁 → 점심/후식.** 저녁(번개모임·팀회식) 완전 제거. 후식은 하위 분기 없이 단일 모드.
 - **후식 = 위치기반 반경** — 현재 위치 기준 **300m**, 군인공제회관 폴백 기준 **500m** (둘 다 부족 시 1km 자동 확장). 점심 원칙(군인공제회관 고정)의 유일한 예외 — 브라우저 Geolocation 사용, 권한 거부/실패 시 `COMPANY_COORDS` 500m 폴백 + 안내 토스트. (반경 상수 `DESSERT_RADIUS_LOCATION_M`/`DESSERT_RADIUS_COMPANY_M`, 라우트에서 소스별 분기)

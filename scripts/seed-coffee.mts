@@ -21,7 +21,7 @@ const MAX_ROWS = 250;
 // 헤더 (coffee 시트 1행과 동일)
 const HEADER = [
   'name', 'category_sub', 'signature_menu', 'price_note', 'address',
-  'lat', 'lng', 'comment', 'active', 'weight', 'phone', 'visited', 'recommended',
+  'lat', 'lng', 'comment', 'active', 'weight', 'phone', 'visited', 'recommended', '아아INDEX',
 ];
 
 // 다양성 확보용 카페 키워드 (후식 5종 커버)
@@ -124,6 +124,7 @@ function toRow(d: KakaoDoc): string[] {
     tsvCell(d.phone),      // phone
     'FALSE',               // visited (손으로)
     'FALSE',               // recommended (손으로: 방문 후 추천이면 TRUE)
+    '',                    // 아아INDEX (손으로: 아이스아메리카노 가격)
   ];
 }
 

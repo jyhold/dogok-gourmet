@@ -375,6 +375,7 @@ export const MOCK_CAFES: Cafe[] = [
     phone: '02-573-1010',
     visited: true,
     recommended: true,
+    iceAmericano: 4500,
   },
   {
     name: '공제회관 앞 베이크샵',
@@ -403,6 +404,7 @@ export const MOCK_CAFES: Cafe[] = [
     weight: 1,
     phone: '02-575-2020',
     recommended: true,
+    iceAmericano: 4800,
   },
   {
     name: '도곡 젤라또',
@@ -417,6 +419,7 @@ export const MOCK_CAFES: Cafe[] = [
     weight: 1,
     visited: true,
     recommended: true,
+    iceAmericano: 3900,
   },
   {
     // ~700m — 500m 밖, 1km 내. 반경 확장 시연용.

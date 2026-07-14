@@ -185,6 +185,7 @@ function cafeCuratedToCandidate(c: Cafe, center: Coords): Candidate {
     phone: c.phone,
     visited: c.visited,
     recommended: c.recommended,
+    iceAmericano: c.iceAmericano,
     weight: c.weight,
   };
 }

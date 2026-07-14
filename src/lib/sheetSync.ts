@@ -33,10 +33,10 @@ export async function pingWebhook(
   // active=FALSE → 앱에 미노출. name에 눈에 띄는 표식. 각 시트 헤더 열수에 맞춤.
   const testRow =
     target === 'coffee'
-      ? // coffee 13열: name,category_sub,signature_menu,price_note,address,lat,lng,comment,active,weight,phone,visited,recommended
+      ? // coffee 14열: name,category_sub,signature_menu,price_note,address,lat,lng,comment,active,weight,phone,visited,recommended,아아INDEX
         [
           '__동기화_테스트__', '커피·음료', '', '', '웹훅 테스트 행 — 확인 후 삭제하세요',
-          '37.4891', '127.0529', '', 'FALSE', '1', '', 'FALSE', 'FALSE',
+          '37.4891', '127.0529', '', 'FALSE', '1', '', 'FALSE', 'FALSE', '',
         ]
       : // restaurants 20열
         [

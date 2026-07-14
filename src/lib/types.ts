@@ -94,6 +94,8 @@ export interface Candidate {
   rating?: number;
   /** 후식 미식가 추천 여부 (coffee DB만. 평점 대신 추천 T/F) */
   recommended?: boolean;
+  /** 아아INDEX — 아이스아메리카노 가격(원). coffee DB만. 향후 가격대 필터용 */
+  iceAmericano?: number;
   /** 룰렛 가중치 (최종 계산값) */
   weight: number;
   kakaoPlaceUrl?: string;
@@ -122,6 +124,8 @@ export interface Cafe {
   visited?: boolean;
   /** 미식가 추천 여부 (방문 후 '추천'만 판정) */
   recommended?: boolean;
+  /** 아아INDEX — 아이스아메리카노 가격(원). 향후 가격대 필터 기준 */
+  iceAmericano?: number;
 }
 
 export interface Coords {

@@ -52,14 +52,26 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
 
   return (
     <div className="result-card frame">
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div className="result-head">
         <DotIcon sub={c.categorySub} size={44} />
-        <div>
+        <div className="result-title">
           <div className="cat">
             {c.categoryMain} · {c.categorySub}
           </div>
           <h2>{c.name}</h2>
         </div>
+        {isDessert && (c.iceAmericano != null || c.recommended || c.visited) && (
+          <div className="dessert-corner">
+            {c.iceAmericano != null && (
+              <div className="aa-index" title="아이스 아메리카노 가격 (아아INDEX)">
+                <span className="aa-index-label">아아INDEX</span>
+                <span className="aa-index-val">{c.iceAmericano.toLocaleString()}원</span>
+              </div>
+            )}
+            {c.recommended && <span className="visited-badge">👍 미식가 추천</span>}
+            {c.visited && <span className="visited-badge">✅ 직접 방문</span>}
+          </div>
+        )}
       </div>
 
       <div className="meta-line">
@@ -81,18 +93,12 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
         )}
       </div>
 
-      {/* 점심: 미식가 평점(별점). 후식: 추천/방문 배지 */}
+      {/* 점심: 미식가 평점(별점). 후식은 우상단 코너에 추천/방문 배지 + 아아INDEX */}
       {!isDessert && c.rating != null && (
         <div className="rating-slot">
           <span className="rating-label">⭐ 미식가 평점</span>
           <StarRating rating={c.rating} />
           <span className="rating-num pixel-en">{c.rating}/10</span>
-          {c.visited && <span className="visited-badge">✅ 직접 방문 인증</span>}
-        </div>
-      )}
-      {isDessert && (c.recommended || c.visited) && (
-        <div className="rating-slot">
-          {c.recommended && <span className="visited-badge">👍 미식가 추천</span>}
           {c.visited && <span className="visited-badge">✅ 직접 방문 인증</span>}
         </div>
       )}

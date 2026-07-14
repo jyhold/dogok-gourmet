@@ -66,13 +66,13 @@ export function buildSheetRow(p: KakaoLike, mealType: string): string[] {
   ];
 }
 
-// ── 후식(coffee) 시트 헤더 13열 (coffee 탭 1행과 동일) ──
+// ── 후식(coffee) 시트 헤더 14열 (coffee 탭 1행과 동일) ──
 export const COFFEE_SHEET_HEADER = [
   'name', 'category_sub', 'signature_menu', 'price_note', 'address',
-  'lat', 'lng', 'comment', 'active', 'weight', 'phone', 'visited', 'recommended',
+  'lat', 'lng', 'comment', 'active', 'weight', 'phone', 'visited', 'recommended', '아아INDEX',
 ];
 
-/** 카카오 CE7(카페) 결과 → coffee 시트 13열 행. 큐레이션 칸(메뉴·추천)은 빈 값. */
+/** 카카오 CE7(카페) 결과 → coffee 시트 14열 행. 큐레이션 칸(메뉴·추천·아아INDEX)은 빈 값. */
 export function buildCafeRow(p: KakaoLike): string[] {
   const mapped = mapKakaoCafe(p.category_name);
   const address = p.road_address_name || p.address_name;
@@ -90,5 +90,6 @@ export function buildCafeRow(p: KakaoLike): string[] {
     cell(p.phone), // phone
     'FALSE', // visited (손)
     'FALSE', // recommended (손: 방문 후 추천이면 TRUE)
+    '', // 아아INDEX (손: 아이스아메리카노 가격)
   ];
 }
