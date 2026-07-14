@@ -42,3 +42,4 @@ SHEET_WEBHOOK_SECRET.txt
 
 # 역세권 후식 시드 생성물 (재생성 가능)
 coffee-stations.tsv
+shabu-seed.tsv
