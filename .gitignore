@@ -36,3 +36,6 @@ phase0-seed.tsv
 # 키 메모 등 로컬 전용 (커밋/배포 금지)
 REST API.txt
 *.key.txt
+SHEET_WEBHOOK_SECRET.txt
+*secret*.txt
+*SECRET*.txt

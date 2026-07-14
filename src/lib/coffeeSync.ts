@@ -74,8 +74,21 @@ export async function syncNewCafes(radiusM = 1000): Promise<CoffeeSyncResult> {
     if (!res.ok) {
       return { scanned: kakao.length, fresh: rows.length, added: 0, skipped, error: `웹훅 ${res.status}` };
     }
-    const j = (await res.json().catch(() => ({}))) as { added?: number };
-    return { scanned: kakao.length, fresh: rows.length, added: j.added ?? rows.length, skipped };
+    // 웹훅 응답을 반드시 확인 — 실패를 성공으로 오보하지 않도록 (added 추정 금지)
+    const j = (await res.json().catch(() => ({}))) as { added?: number; error?: string };
+    if (j.error) {
+      return { scanned: kakao.length, fresh: rows.length, added: 0, skipped, error: `웹훅 응답: ${j.error}` };
+    }
+    if (typeof j.added !== 'number') {
+      return {
+        scanned: kakao.length,
+        fresh: rows.length,
+        added: 0,
+        skipped,
+        error: '웹훅 응답에 added 없음 — Apps Script 배포 버전 확인 필요(sheet 지원 doPost인지)',
+      };
+    }
+    return { scanned: kakao.length, fresh: rows.length, added: j.added, skipped };
   } catch (err) {
     return {
       scanned: kakao.length,
