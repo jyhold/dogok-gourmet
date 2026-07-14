@@ -19,32 +19,43 @@ function normName(s: string): string {
 }
 
 /**
- * 웹훅 쓰기 경로 점검용 — 표시용 테스트 행 1개를 시트에 append.
+ * 웹훅 쓰기 경로 점검용 — 표시용 테스트 행 1개를 대상 탭에 append.
  * active=FALSE라 앱 룰렛엔 안 나옴. 확인 후 시트에서 그 행만 삭제하면 됨.
+ * @param target 'restaurants'(기본) | 'coffee'
  */
-export async function pingWebhook(): Promise<{ ok: boolean; added?: number; error?: string }> {
+export async function pingWebhook(
+  target: 'restaurants' | 'coffee' = 'restaurants',
+): Promise<{ ok: boolean; sheet: string; added?: number; error?: string }> {
   const url = process.env.SHEET_WEBHOOK_URL;
   const secret = process.env.SHEET_WEBHOOK_SECRET;
-  if (!url || !secret) return { ok: false, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
+  if (!url || !secret) return { ok: false, sheet: target, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
 
-  // 19열 (헤더 순서). active=FALSE → 앱에 미노출. 눈에 띄게 name에 표식.
-  const testRow = [
-    '__동기화_테스트__', '기타', '기타', '', '보통', '',
-    '웹훅 테스트 행 — 확인 후 삭제하세요', '37.4891', '127.0529', '',
-    'FALSE', '1', '둘다', 'FALSE', '', '', 'FALSE', 'FALSE', '',
-  ];
+  // active=FALSE → 앱에 미노출. name에 눈에 띄는 표식. 각 시트 헤더 열수에 맞춤.
+  const testRow =
+    target === 'coffee'
+      ? // coffee 13열: name,category_sub,signature_menu,price_note,address,lat,lng,comment,active,weight,phone,visited,recommended
+        [
+          '__동기화_테스트__', '커피·음료', '', '', '웹훅 테스트 행 — 확인 후 삭제하세요',
+          '37.4891', '127.0529', '', 'FALSE', '1', '', 'FALSE', 'FALSE',
+        ]
+      : // restaurants 20열
+        [
+          '__동기화_테스트__', '기타', '기타', '', '보통', '',
+          '웹훅 테스트 행 — 확인 후 삭제하세요', '37.4891', '127.0529', '',
+          'FALSE', '1', '둘다', 'FALSE', '', '', 'FALSE', 'FALSE', '', '',
+        ];
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret, rows: [testRow] }),
+      body: JSON.stringify({ secret, sheet: target, rows: [testRow] }),
     });
-    if (!res.ok) return { ok: false, error: `웹훅 ${res.status}` };
+    if (!res.ok) return { ok: false, sheet: target, error: `웹훅 ${res.status}` };
     const j = (await res.json().catch(() => ({}))) as { added?: number; error?: string };
-    if (j.error) return { ok: false, error: `웹훅 응답: ${j.error}` };
-    return { ok: true, added: j.added ?? 1 };
+    if (j.error) return { ok: false, sheet: target, error: `웹훅 응답: ${j.error}` };
+    return { ok: true, sheet: target, added: j.added ?? 1 };
   } catch (err) {
-    return { ok: false, error: `웹훅 호출 실패: ${(err as Error).message}` };
+    return { ok: false, sheet: target, error: `웹훅 호출 실패: ${(err as Error).message}` };
   }
 }
 
