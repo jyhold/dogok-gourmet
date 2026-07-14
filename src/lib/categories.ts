@@ -208,6 +208,26 @@ const DESSERT_RULES: MappingRule[] = [
   { keywords: ['커피', '카페', '차', '티', '스무디', '주스', '음료', '전통찻집'], result: { main: DESSERT_MAIN, sub: '커피·음료' } },
 ];
 
+// ── 후식 매장 판정 (CE7 + FD6 간식류) ──
+// 카카오는 후식을 두 그룹에 나눠 담는다:
+//   CE7(카페): 스타벅스, 설빙('카페>테마카페>디저트카페>설빙') …
+//   FD6(음식점): 배스킨라빈스('간식>아이스크림'), 아티제·파리바게뜨('간식>제과,베이커리') …
+// → CE7만 뒤지면 아이스크림·빙수·제과류가 통째로 누락된다.
+// 떡볶이·김밥·토스트 같은 일반 분식은 후식이 아니므로 제외(키워드에 없음).
+const DESSERT_PLACE_RE =
+  /카페|커피|아이스크림|빙수|젤라또|제과|베이커리|베이글|도넛|와플|크로플|츄러스|케이크|타르트|마카롱|디저트|구움과자|빵|스무디|주스|찻집|티하우스/;
+
+/**
+ * 후식 매장인가? (그룹코드 무관 — category_name으로 판정)
+ * 1) 카카오 대분류가 '음식점'이어야 함 — 스터디카페('서비스,산업 > 공간대여'),
+ *    만화·키즈카페('가정,생활 > …', 그런데 CE7로 분류됨)를 걸러내는 핵심 조건.
+ * 2) 그중 후식 키워드가 있는 것만. (떡볶이·김밥 등 일반 분식은 false)
+ */
+export function isDessertPlace(categoryName: string): boolean {
+  if (!categoryName || !categoryName.startsWith('음식점')) return false;
+  return DESSERT_PLACE_RE.test(categoryName);
+}
+
 /** 카카오 CE7 category_name → 후식 하위 카테고리. 실패 시 '커피·음료'(CE7은 전부 카페) */
 export function mapKakaoCafe(categoryName: string): MappedCategory {
   if (categoryName) {

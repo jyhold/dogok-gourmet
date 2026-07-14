@@ -5,6 +5,7 @@ import { COMPANY_COORDS, haversineMeters } from './geo';
 import { searchNearby } from './kakao';
 import { loadCafes, loadCafeNames } from './coffeeSheet';
 import { buildCafeRow } from './classify';
+import { isDessertPlace } from './categories';
 import { isDuplicatePlace, type KnownPlace } from './syncDedupe';
 
 export interface CoffeeSyncResult {
@@ -27,11 +28,21 @@ export async function syncNewCafes(radiusM = 1000): Promise<CoffeeSyncResult> {
     return { scanned: 0, fresh: 0, added: 0, skipped: 0, error: 'SHEET_WEBHOOK_URL/SECRET 미설정' };
   }
 
-  const [kakao, parsed, allNames] = await Promise.all([
+  // 카카오는 후식을 두 그룹에 나눠 담는다 — CE7(카페)만 뒤지면 FD6로 분류된
+  // 배스킨라빈스('간식>아이스크림')·아티제('간식>제과,베이커리')가 통째로 누락된다.
+  // → CE7 + FD6를 모두 훑고 isDessertPlace로 후식만 채택.
+  //   (덤: CE7이지만 후식이 아닌 만화·키즈카페도 여기서 걸러짐)
+  const [cafes, foods, parsed, allNames] = await Promise.all([
     searchNearby(COMPANY_COORDS, radiusM, 'CE7'),
+    searchNearby(COMPANY_COORDS, radiusM, 'FD6'),
     loadCafes(),
     loadCafeNames(),
   ]);
+  const byId = new Map<string, (typeof cafes)[number]>();
+  for (const p of [...cafes, ...foods]) {
+    if (isDessertPlace(p.category_name)) byId.set(p.id, p);
+  }
+  const kakao = [...byId.values()];
 
   // 중복 비교 대상: 파싱본(좌표 O) + 원본 상호명(좌표 없는 스킵 행까지 커버)
   const existing: KnownPlace[] = [

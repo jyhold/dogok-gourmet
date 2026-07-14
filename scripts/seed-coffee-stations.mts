@@ -11,7 +11,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import Papa from 'papaparse';
-import { mapKakaoCafe } from '../src/lib/categories.ts';
+import { mapKakaoCafe, isDessertPlace } from '../src/lib/categories.ts';
 import { haversineMeters } from '../src/lib/geo.ts';
 import { isDuplicatePlace, type KnownPlace } from '../src/lib/syncDedupe.ts';
 import { buildCafeRow } from '../src/lib/classify.ts';
@@ -82,10 +82,19 @@ async function loadExisting(sheetId: string): Promise<KnownPlace[]> {
     });
 }
 
-/** 한 역 주변 CE7 수집 (카테고리 3페이지 + 키워드 다양성) */
+/**
+ * 한 역 주변 후식 매장 수집.
+ * ① CE7(카페) 카테고리 3페이지  ② 키워드 검색 — 그룹코드 제한 없이(!) 후식만 필터
+ * ②에 CE7을 걸면 FD6로 분류된 배스킨라빈스·아티제(간식>아이스크림/제과)가 통째로 누락된다.
+ */
 async function collectAround(center: { lat: number; lng: number }, key: string) {
   const seen = new Map<string, KakaoDoc>();
   const base = { x: String(center.lng), y: String(center.lat), radius: String(RADIUS), sort: 'distance' };
+  const add = (docs: KakaoDoc[]) => {
+    docs.forEach((d) => {
+      if (isDessertPlace(d.category_name)) seen.set(d.id, d);
+    });
+  };
 
   for (let page = 1; page <= 3; page++) {
     const { documents, meta } = await kakao(
@@ -93,17 +102,14 @@ async function collectAround(center: { lat: number; lng: number }, key: string) 
       { ...base, category_group_code: 'CE7', size: '15', page: String(page) },
       key,
     );
-    documents.forEach((d) => seen.set(d.id, d));
+    add(documents);
     if (meta.is_end) break;
   }
   for (const q of KEYWORDS) {
     try {
-      const { documents } = await kakao(
-        'keyword.json',
-        { ...base, query: q, category_group_code: 'CE7', size: '15', page: '1' },
-        key,
-      );
-      documents.forEach((d) => seen.set(d.id, d));
+      // 그룹코드 미지정 → CE7·FD6 모두 회수 후 isDessertPlace로 후식만 채택
+      const { documents } = await kakao('keyword.json', { ...base, query: q, size: '15', page: '1' }, key);
+      add(documents);
     } catch {
       /* 개별 키워드 실패 무시 */
     }
