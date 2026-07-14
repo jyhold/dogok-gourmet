@@ -22,6 +22,12 @@ import { haversineMeters, inAllowedDistrict, reachableInMode, walkMinutes } from
 // ── 점심 모드는 항상 '점심' 시간대 (저녁 폐지) ──────────────
 const LUNCH_MEAL = '점심' as const;
 
+/**
+ * 혼밥 모드에서 관리자DB(=solo_friendly 검증 완료) 후보에 주는 가중치.
+ * 이 모드의 curated는 전부 solo_friendly=TRUE라, 사실상 '검증된 곳 > 카카오 실시간' 배수다.
+ */
+const SOLO_CURATED_BOOST = 2;
+
 /** meal_type 필드가 점심과 호환되는지 (둘다·점심 통과, 저녁 제외) */
 function lunchMealMatches(rMeal: Restaurant['mealType']): boolean {
   return rMeal === '둘다' || rMeal === LUNCH_MEAL;
@@ -140,16 +146,17 @@ export async function buildCandidates(
 
   // 3) 모드별 후보 구성
   if (mode === 'lunch-solo') {
-    // 혼밥: 다인 전제 제외, 혼밥 친화 가중치↑, solo_friendly 추가 가중치
+    // 혼밥(엄격): 관리자DB는 solo_friendly=TRUE만 출현. FALSE는 미검증으로 보고 제외한다.
+    // 카테고리 제외(SOLO_EXCLUDED_SUBS)는 여기서 볼 필요가 없다 — 관리자가 TRUE로 찍었다면
+    // 고기구이라도 1인 가능하다는 판단이므로 그대로 통과시킨다.
     curatedCands = curatedCands
-      .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub) || c.soloFriendly)
+      .filter((c) => c.soloFriendly)
       .map((c) => ({
         ...c,
         weight:
-          c.weight *
-          (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1) *
-          (c.soloFriendly ? 2 : 1),
+          c.weight * (SOLO_FRIENDLY_SUBS.has(c.categorySub) ? 1.5 : 1) * SOLO_CURATED_BOOST,
       }));
+    // 카카오 실시간 결과엔 solo_friendly 정보가 없어 카테고리 휴리스틱으로만 거른다.
     kakaoCands = kakaoCands
       .filter((c) => !SOLO_EXCLUDED_SUBS.has(c.categorySub))
       .map((c) => ({

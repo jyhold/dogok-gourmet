@@ -169,6 +169,20 @@ test('buildCandidates 혼밥: 고기구이 제외', async () => {
   assert.equal(hasGrill, false);
   assert.ok(candidates.length > 0);
 });
+test('buildCandidates 혼밥(엄격): 관리자DB는 solo_friendly=TRUE만 출현', async () => {
+  const { candidates } = await buildCandidates(COMPANY_COORDS, 'lunch-solo', 'taxi');
+  const curated = candidates.filter((c) => c.curated);
+  assert.ok(curated.length > 0, '혼밥 인증 관리자DB 후보가 있어야 함');
+  // 시트에서 solo_friendly=FALSE(미검증)인 곳은 혼밥 룰렛에 나오면 안 된다
+  assert.ok(curated.every((c) => c.soloFriendly), 'solo_friendly=FALSE가 섞이면 안 됨');
+
+  // 점심약속 모드에선 그대로 나온다 (혼밥 모드에만 적용되는 규칙)
+  const group = await buildCandidates(COMPANY_COORDS, 'lunch-group', 'taxi');
+  assert.ok(
+    group.candidates.some((c) => c.curated && !c.soloFriendly),
+    '점심약속은 solo_friendly와 무관해야 함',
+  );
+});
 test('buildCandidates 도보: 관악구 카카오 결과 없음', async () => {
   const { candidates } = await buildCandidates(COMPANY_COORDS, 'lunch-group', 'walk');
   const gwanak = candidates.some((c) => c.address.includes('관악구'));
