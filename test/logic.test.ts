@@ -26,6 +26,26 @@ test('카카오 카테고리 매핑: 세부 우선', () => {
   assert.equal(mapKakaoCategory('음식점 > 일식 > 초밥,롤').sub, '초밥·회');
   assert.equal(mapKakaoCategory('음식점 > 한식 > 육류,고기').sub, '고기구이');
 });
+// 칼국수 / 냉면·갈비탕 분리 — 규칙 순서에 민감한 조합들을 고정한다
+test('카카오 매핑: 칼국수와 냉면·갈비탕이 갈린다', () => {
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 칼국수').sub, '칼국수');
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 수제비').sub, '칼국수');
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 국시').sub, '칼국수');
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 냉면').sub, '냉면·갈비탕');
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 면옥').sub, '냉면·갈비탕');
+  // '갈비탕'은 국밥·탕('탕')과 고기구이('갈비')보다 먼저 걸려야 한다
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 갈비탕').sub, '냉면·갈비탕');
+  // 반대로 '갈비'(갈비집)는 여전히 고기구이
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 육류,고기 > 갈비').sub, '고기구이');
+  // 설렁탕은 그대로 국밥·탕
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 설렁탕').sub, '국밥·탕');
+});
+test("카카오 매핑: '국수'가 쌀국수·칼국수를 빼앗지 않는다", () => {
+  assert.equal(mapKakaoCategory('음식점 > 아시아음식 > 쌀국수').main, '아시안');
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 칼국수').sub, '칼국수');
+  // 그 외 일반 국수집은 분식으로
+  assert.equal(mapKakaoCategory('음식점 > 한식 > 국수').sub, '국수·우동');
+});
 test('카카오 매핑 실패 → 기타', () => {
   assert.equal(mapKakaoCategory('음식점 > 알수없는것').main, '기타');
   assert.equal(mapKakaoCategory('').main, '기타');

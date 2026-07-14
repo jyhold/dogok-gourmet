@@ -51,8 +51,8 @@ function getPosition(): Promise<{ coords: { lat: number; lng: number }; fallback
 }
 
 // ── 날씨 기반 추천 메뉴 (메인 하단 마스코트 말풍선) ──
-const REC_WARM = ['국밥·탕', '라멘·우동', '면류(칼국수·냉면)', '짜장·짬뽕'];
-const REC_COOL = ['면류(칼국수·냉면)', '쌀국수·베트남', '샐러드·포케', '초밥·회'];
+const REC_WARM = ['국밥·탕', '라멘·우동', '칼국수', '짜장·짬뽕'];
+const REC_COOL = ['냉면·갈비탕', '쌀국수·베트남', '샐러드·포케', '초밥·회'];
 const REC_HEARTY = ['찌개·백반', '마라·훠궈', '고기구이', '돈카츠·카레'];
 const REC_NICE = ['돈카츠·카레', '파스타·피자', '덮밥', '버거', '초밥·회', '쌀국수·베트남', '국수·우동'];
 

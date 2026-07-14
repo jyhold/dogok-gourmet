@@ -27,7 +27,7 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
   {
     name: '매봉 손칼국수',
     categoryMain: '한식',
-    categorySub: '면류(칼국수·냉면)',
+    categorySub: '칼국수',
     signatureMenu: '바지락 손칼국수+겉절이',
     visited: true,
     rating: 7,

@@ -1,7 +1,7 @@
 import type { PriceTier } from './types';
 
 // ── 2단계 메뉴 카테고리 체계 (기획서 §3.3) ──────────────────
-// 대분류 8개 + 하위 24개
+// 대분류 8개 + 하위 28개
 
 export interface CategoryDef {
   main: string;
@@ -9,7 +9,7 @@ export interface CategoryDef {
 }
 
 export const CATEGORY_TREE: CategoryDef[] = [
-  { main: '한식', subs: ['국밥·탕', '고기구이', '찌개·백반', '면류(칼국수·냉면)', '죽·건강식'] },
+  { main: '한식', subs: ['국밥·탕', '고기구이', '찌개·백반', '칼국수', '냉면·갈비탕', '죽·건강식'] },
   { main: '분식', subs: ['떡볶이·김밥', '국수·우동', '만두'] },
   { main: '중식', subs: ['짜장·짬뽕', '마라·훠궈', '양꼬치·중식당'] },
   { main: '일식', subs: ['초밥·회', '라멘·우동', '돈카츠·카레', '덮밥', '장어요리'] },
@@ -48,10 +48,12 @@ const SUB_RULES: MappingRule[] = [
   { keywords: ['베이커리', '제과', '도넛', '베이글'], result: { main: '카페·간편', sub: '샌드위치·브런치' } },
   // 장어 — '구이'/'일식' 등 일반 규칙보다 먼저 매칭
   { keywords: ['장어', '아나고', '붕장어', '풍천장어'], result: { main: '일식', sub: '장어요리' } },
+  // 냉면·갈비탕 — '갈비탕'이 아래 국밥·탕('탕')·고기구이('갈비')에 먼저 걸리므로 위에 둔다
+  { keywords: ['냉면', '갈비탕', '면옥', '밀면'], result: { main: '한식', sub: '냉면·갈비탕' } },
   // 한식
+  { keywords: ['칼국수', '수제비', '국시'], result: { main: '한식', sub: '칼국수' } },
   { keywords: ['국밥', '설렁탕', '곰탕', '해장국', '순대국', '감자탕', '탕'], result: { main: '한식', sub: '국밥·탕' } },
   { keywords: ['육류', '고기', '삼겹', '갈비', '곱창', '구이', '숯불'], result: { main: '한식', sub: '고기구이' } },
-  { keywords: ['냉면', '칼국수', '국수', '수제비'], result: { main: '한식', sub: '면류(칼국수·냉면)' } },
   { keywords: ['죽', '보양', '삼계', '건강식'], result: { main: '한식', sub: '죽·건강식' } },
   { keywords: ['백반', '한정식', '찌개', '김치찌개', '된장', '가정식', '기사식당'], result: { main: '한식', sub: '찌개·백반' } },
   // 분식
@@ -74,6 +76,9 @@ const SUB_RULES: MappingRule[] = [
   { keywords: ['쌀국수', '베트남', '분짜'], result: { main: '아시안', sub: '쌀국수·베트남' } },
   { keywords: ['태국', '팟타이', '똠양'], result: { main: '아시안', sub: '태국·팟타이' } },
   { keywords: ['인도', '커리', '카레(인도)'], result: { main: '아시안', sub: '인도·커리' } },
+  // '국수' 일반 — 반드시 칼국수(한식)·쌀국수(아시안) 뒤에 와야 그쪽을 빼앗지 않는다.
+  // 남는 건 잔치국수·구포국수류 → 분식.
+  { keywords: ['국수'], result: { main: '분식', sub: '국수·우동' } },
   // 카페·간편
   { keywords: ['샐러드', '포케'], result: { main: '카페·간편', sub: '샐러드·포케' } },
   { keywords: ['샌드위치', '브런치', '베이글'], result: { main: '카페·간편', sub: '샌드위치·브런치' } },
@@ -111,7 +116,8 @@ export function mapKakaoCategory(categoryName: string): MappedCategory {
 const PRICE_BY_SUB: Record<string, PriceTier> = {
   '국밥·탕': '가성비',
   '찌개·백반': '가성비',
-  '면류(칼국수·냉면)': '가성비',
+  '칼국수': '가성비',
+  '냉면·갈비탕': '보통',
   '죽·건강식': '보통',
   '떡볶이·김밥': '가성비',
   '국수·우동': '가성비',
@@ -147,7 +153,8 @@ export function estimatePriceTier(sub: string): PriceTier {
 /** 혼밥 친화 하위 카테고리 (가중치↑) */
 export const SOLO_FRIENDLY_SUBS = new Set<string>([
   '국밥·탕',
-  '면류(칼국수·냉면)',
+  '칼국수',
+  '냉면·갈비탕',
   '떡볶이·김밥',
   '국수·우동',
   '만두',
