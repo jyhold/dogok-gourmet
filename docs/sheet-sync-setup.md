@@ -25,15 +25,21 @@ name	category_sub	signature_menu	price_note	address	lat	lng	comment	active	weigh
    (기존에 이미 배포했다면 `doPost`만 아래 버전으로 교체 후 **새 배포**하면 됩니다. `sheet` 미지정 시 `restaurants`로 동작해 기존 호환.)
 
 ```javascript
-// 도곡한 미식가 — 시트 자동 추가 웹훅 (restaurants + coffee 공용)
+// 도곡한 미식가 — 시트 자동 추가 웹훅 (restaurants + coffee + stats 공용)
 const SECRET = '여기에_긴_비밀문자열';  // 아래 SHEET_WEBHOOK_SECRET과 반드시 동일
-const ALLOWED = ['restaurants', 'coffee'];  // 쓰기 허용 탭
+const ALLOWED = ['restaurants', 'coffee', 'stats'];  // 쓰기 허용 탭
 
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     if (body.secret !== SECRET) return json({ error: 'unauthorized' });
-    const name = ALLOWED.indexOf(body.sheet) >= 0 ? body.sheet : 'restaurants'; // 기본 restaurants
+
+    // ⚠️ 모르는 탭은 '조용히 restaurants로 폴백'하지 않는다.
+    // 예전 버전이 그렇게 동작해서, coffee/stats를 보내면 관리자DB가 오염됐다.
+    // 미지정만 restaurants(기존 호환), 목록에 없는 이름은 명시적 에러.
+    const name = body.sheet || 'restaurants';
+    if (ALLOWED.indexOf(name) < 0) return json({ error: '허용되지 않은 탭: ' + name });
+
     const sheet = SpreadsheetApp.getActive().getSheetByName(name);
     if (!sheet) return json({ error: name + ' 탭 없음' });
     const rows = body.rows || [];

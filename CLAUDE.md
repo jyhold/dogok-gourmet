@@ -25,6 +25,13 @@
 - **후식(coffee 시트)**: 평점 대신 `visited`+`recommended`(추천 T/F). 결과 카드에 '👍 미식가 추천'/'✅ 직접 방문' 배지(별점 없음). 필터 '👍 미식가 추천 우선' → `boostRecommended` recommended 가중치 ×6.
 - 메인 하단 마스코트: `weatherLine`+`recommendSub`(날씨 기반 추천). page.tsx.
 
+## 관리자 통계 (v1.13, `docs/stats-setup.md`)
+`/stats` — 페이지 내 비밀번호(`STATS_KEY`) 입력 후 방문자·룰렛·좋아요·지도클릭 통계. 저장소는 시트 `stats` 탭(7열), 쓰기는 기존 Apps Script 웹훅 재사용.
+- **⚠️ Apps Script는 모르는 탭을 restaurants로 조용히 폴백했었다** — `ALLOWED`에 `stats` 추가 + 폴백 제거가 선행 조건. `statsSink.ts`가 응답의 `sheet`를 검증해 다르면 영구 차단(관리자DB 오염 방지). `STATS_ENABLED=TRUE`로 이중 잠금.
+- `ts`는 `YYYYMMDD-HHmmss`(KST) — ISO로 쓰면 시트가 날짜 셀로 바꿔 되읽을 때 깨진다.
+- 수집은 프로덕션에서만 (로컬 dev 트래픽 제외). `USE_MOCK=TRUE`면 `MOCK_STAT_ROWS`로 대시보드 개발 가능.
+- 차트 색은 앱 파스텔이 아니라 **검증 통과한 마크용 팔레트**(`StatsCharts.tsx` `CHART`) — 파스텔은 밝기·채도·대비 검증에 전부 걸린다.
+
 ## 코드 지도
 - `src/lib/types.ts` 도메인 타입 (Restaurant/Candidate/모드/거리)
 - `src/lib/categories.ts` 2단계 카테고리 29종(일식 장어요리, 한식 칼국수/냉면·갈비탕/샤브샤브 포함) + 카카오 매핑(세부→대분류→기타. **규칙은 배열 순서대로 첫 매치 채택 — 샤브샤브가 칼국수보다 위(등촌샤브칼국수), 냉면·갈비탕이 국밥·탕('탕')·고기구이('갈비')보다 위, 일반 '국수'는 칼국수·쌀국수보다 아래여야 함**)
@@ -33,7 +40,8 @@
 - `src/lib/sheet.ts`(식당) · **`src/lib/coffeeSheet.ts`(후식, `loadCafes`)** · `src/lib/kakao.ts`(groupCode FD6/CE7) · `src/lib/weather.ts` 외부 소스 로더 (mock 폴백 내장)
 - `src/lib/candidates.ts` ★ 점심 `buildCandidates` + **후식 `buildDessertCandidates`(위치 300m/폴백 500m·자동확장)** + 중복병합(이름+50m, DB우선) + 가중치
 - `src/lib/roulette.ts` 프론트 필터 + 가중치 추첨(`boostVisited`/**`boostRecommended`**)
-- `src/app/api/*` (nearby=점심 · **dessert=후식** · restaurants · weather · sync) · `src/app/page.tsx` 오케스트레이터(후식은 `getPosition` geolocation) · `src/components/*` UI
+- **통계**: `src/lib/stats.ts`(타임스탬프·detail 인코딩·`aggregate` 순수함수) · `statsSink.ts`(쓰기+오염방지) · `statsSheet.ts`(읽기) · `clientTrack.ts`(익명ID·sendBeacon) · `src/app/stats/page.tsx` + `components/StatsCharts.tsx`
+- `src/app/api/*` (nearby=점심 · **dessert=후식** · restaurants · weather · sync · **track=수집** · **stats=집계**) · `src/app/page.tsx` 오케스트레이터(후식은 `getPosition` geolocation) · `src/components/*` UI
 
 ## 디자인
 Tiny Town 도트(픽셀) 감성. CSS만으로 9-patch 프레임·픽셀 버튼(이미지 0). 폰트 Galmuri11+Press Start 2P+Pretendard.

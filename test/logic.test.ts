@@ -18,6 +18,17 @@ import {
   DESSERT_NEAR_BOOST,
 } from '../src/lib/candidates.ts';
 import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
+import {
+  aggregate,
+  toKstStamp,
+  stampToDate,
+  formatDetail,
+  parseDetail,
+  buildStatsRow,
+  rowToStat,
+  STATS_HEADER,
+} from '../src/lib/stats.ts';
+import { MOCK_STAT_ROWS } from '../src/lib/mockData.ts';
 import type { Candidate } from '../src/lib/types.ts';
 
 // ── 카테고리 매핑 (병목 7) ──
@@ -295,4 +306,70 @@ test('isDuplicatePlace: 다른 상호는 중복 아님', () => {
 test('normName: 지점 접미사·공백 제거', () => {
   assert.equal(normName('찌개의민족 강남점'), '찌개의민족강남');
   assert.equal(normName('스타벅스 본점'), '스타벅스');
+});
+
+// ── 통계 (§11) ──
+test('toKstStamp: UTC → KST, 시트가 날짜로 오해 못 할 형식', () => {
+  // 2026-07-15T01:23:45Z = KST 10:23:45
+  assert.equal(toKstStamp(new Date('2026-07-15T01:23:45Z')), '20260715-102345');
+  // 자정 넘김 (UTC 15:30 = KST 다음날 00:30)
+  assert.equal(toKstStamp(new Date('2026-07-15T15:30:00Z')), '20260716-003000');
+  // 숫자로도 날짜로도 파싱되지 않아야 시트가 원본을 보존한다
+  const s = toKstStamp(new Date('2026-07-15T01:23:45Z'));
+  assert.ok(Number.isNaN(Number(s)), '숫자로 파싱되면 시트가 지수표기로 바꿔버림');
+  assert.ok(Number.isNaN(Date.parse(s)), '날짜로 파싱되면 시트가 로케일 형식으로 바꿔버림');
+});
+test('stampToDate: 일자 추출 + 불량 형식 거부', () => {
+  assert.equal(stampToDate('20260715-102345'), '2026-07-15');
+  assert.equal(stampToDate('2026. 7. 15 오전 10:23'), null); // 시트가 날짜로 바꿔버린 경우
+  assert.equal(stampToDate(''), null);
+});
+test('detail 인코딩 왕복 + 빈 값 제거', () => {
+  const s = formatDetail({ respin: true, price: '보통', dist: 'walk', boost: false, empty: '' });
+  assert.equal(s, 'respin=1;price=보통;dist=walk;boost=0');
+  assert.deepEqual(parseDetail(s), { respin: '1', price: '보통', dist: 'walk', boost: '0' });
+});
+test('buildStatsRow: 7열 + 탭/개행 제거', () => {
+  const row = buildStatsRow(
+    { event: 'spin', visitor: 'v-abc123', mode: 'lunch-solo', place: '정닭\t곰탕', categorySub: '국밥·탕', detail: 'respin=0' },
+    new Date('2026-07-15T01:23:45Z'),
+  );
+  assert.equal(row.length, STATS_HEADER.length);
+  assert.equal(row[0], '20260715-102345');
+  assert.equal(row[4], '정닭 곰탕', '탭이 남으면 시트 열이 밀림');
+});
+test('rowToStat: 불량 행은 null', () => {
+  assert.ok(rowToStat({ ts: '20260715-102345', event: 'spin' }));
+  assert.equal(rowToStat({ ts: '20260715-102345', event: '알수없음' }), null);
+  assert.equal(rowToStat({ ts: 'garbage', event: 'spin' }), null);
+});
+test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
+  const s = aggregate(MOCK_STAT_ROWS, '2026-07-15');
+  // mock: 방문자 5명(aaa,bbb,ccc,ddd,eee), 룰렛 10회, 재추첨 3, 좋아요 4, 지도 3
+  assert.equal(s.visitors, 5);
+  assert.equal(s.spins, 10);
+  assert.equal(s.respins, 3);
+  assert.equal(s.likes, 4);
+  assert.equal(s.maps, 3);
+  // 3일차(오늘=2026-07-15) 방문자는 eee, aaa 둘
+  assert.equal(s.visitorsToday, 2);
+  assert.equal(s.daily.length, 3);
+  assert.equal(s.daily[0].date, '2026-07-13');
+  // 비율
+  assert.equal(s.likeRate, 4 / 10);
+  assert.equal(s.respinRate, 3 / 10);
+  // 정닭곰탕이 3회로 최다 + 좋아요 2
+  assert.equal(s.topPlaces[0].key, '정닭곰탕');
+  assert.equal(s.topPlaces[0].count, 3);
+  assert.equal(s.topPlaces[0].likes, 2);
+  // 모드 분포 합 = 룰렛 수
+  assert.equal(s.byMode.reduce((a, b) => a + b.count, 0), 10);
+});
+test('aggregate: 빈 입력에도 안전 (0으로 나누기 금지)', () => {
+  const s = aggregate([], '2026-07-15');
+  assert.equal(s.spins, 0);
+  assert.equal(s.likeRate, 0);
+  assert.equal(s.respinRate, 0);
+  assert.equal(s.lastEventAt, null);
+  assert.deepEqual(s.daily, []);
 });

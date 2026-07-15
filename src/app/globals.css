@@ -707,3 +707,99 @@ button {
   padding: 4px 0;
   margin-bottom: 8px;
 }
+
+/* ── 관리자 통계 대시보드 (기획서 §11) ─────────────────────── */
+.stats-page { max-width: 760px; }
+
+.stats-actions { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
+.btn-xs { font-size: 11px; padding: 4px 8px; }
+
+.selftest {
+  white-space: pre-wrap; word-break: break-all; font-size: 11px; line-height: 1.5;
+  background: var(--paper); border: 2px solid var(--ink); padding: 8px; margin: 0 0 10px;
+}
+.banner {
+  background: var(--paper); border-left: var(--px) solid var(--sky);
+  padding: 8px 10px; margin: 0 0 10px; font-size: 12px; line-height: 1.5;
+}
+.banner.warn { border-left-color: var(--tomato); }
+
+/* 잠금 화면 */
+.gate { text-align: center; padding: 24px 16px; }
+.gate form { display: flex; flex-direction: column; gap: 8px; max-width: 260px; margin: 12px auto 0; }
+.gate-label { font-family: var(--font-pixel-ko); font-size: 12px; text-align: left; }
+.gate-input {
+  font-family: var(--font-body); font-size: 15px; padding: 10px;
+  border: 2px solid var(--ink); background: var(--paper); color: var(--ink);
+}
+.gate-input:focus { outline: var(--px) solid var(--sky); outline-offset: 0; }
+.gate-err { color: var(--tomato-dark); font-size: 12px; margin-top: 10px; }
+
+/* KPI 타일 — 숫자 자체가 답인 지표는 차트로 만들지 않는다 */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;
+}
+.kpi { padding: 10px 8px; text-align: center; }
+.kpi-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 4px; }
+.kpi-value { font-family: var(--font-pixel-en); font-size: 18px; line-height: 1.3; color: var(--ink); }
+.kpi-unit { font-family: var(--font-pixel-ko); font-size: 11px; margin-left: 2px; color: var(--ink-soft); }
+.kpi-sub { font-size: 10px; color: var(--ink-soft); margin-top: 3px; }
+
+.stat-section { padding: 12px; margin-bottom: 12px; }
+.stat-section .section-title { margin-bottom: 10px; }
+.sub-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 5px; }
+
+.chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* 계열이 2개 이상이면 범례는 항상 — 색만으로 식별시키지 않는다 */
+.legend { display: flex; gap: 10px; font-size: 11px; color: var(--ink-soft); }
+.legend .lg { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { width: 10px; height: 10px; display: inline-block; }
+
+/* 일별 세로 막대 (2계열) */
+.daily { display: flex; align-items: flex-end; gap: 4px; height: 120px; overflow-x: auto; padding-bottom: 2px; }
+.day { flex: 1 0 32px; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.day-bars {
+  flex: 1; display: flex; align-items: flex-end; gap: 2px; /* 마크 사이 2px 간격 */
+  width: 100%; justify-content: center;
+  border-bottom: 2px solid var(--cream-2); /* 은은한 baseline */
+}
+.vbar { width: 9px; min-height: 2px; border-radius: 2px 2px 0 0; transition: opacity .12s; }
+.vbar:hover { opacity: .75; }
+.day-label { font-size: 9px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; }
+
+/* 가로 막대 */
+.bar-list { display: flex; flex-direction: column; gap: 5px; }
+.bar-row { display: grid; grid-template-columns: 96px 1fr 62px; align-items: center; gap: 6px; }
+.bar-label { font-size: 11px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { background: var(--cream-2); height: 12px; display: block; }
+.bar-fill { display: block; height: 100%; min-width: 2px; border-radius: 0 2px 2px 0; transition: opacity .12s; }
+.bar-row:hover .bar-fill { opacity: .75; }
+.bar-val { font-family: var(--font-pixel-en); font-size: 10px; text-align: right; color: var(--ink); }
+.bar-pct { font-family: var(--font-body); font-size: 10px; color: var(--ink-soft); margin-left: 4px; }
+
+/* 표 */
+.stat-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.stat-table th {
+  text-align: left; font-family: var(--font-pixel-ko); font-size: 11px;
+  color: var(--ink-soft); border-bottom: 2px solid var(--cream-2); padding: 4px 6px; font-weight: normal;
+}
+.stat-table td { padding: 5px 6px; border-bottom: 1px solid var(--cream-2); vertical-align: middle; }
+.stat-table tbody tr:hover { background: var(--cream); }
+.top-places .rank { font-family: var(--font-pixel-en); font-size: 10px; color: var(--ink-soft); width: 24px; }
+.top-places td:nth-child(3), .top-places td:nth-child(4) { text-align: right; width: 40px; font-family: var(--font-pixel-en); font-size: 10px; }
+.place-name { display: block; margin-bottom: 3px; }
+.mini-track { display: block; background: var(--cream-2); height: 4px; }
+.mini-fill { display: block; height: 100%; min-width: 2px; }
+
+.filter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.filter-grid .bar-row { grid-template-columns: 52px 1fr 40px; }
+
+@media (max-width: 640px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .filter-grid { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 78px 1fr 56px; }
+}
+
+/* ── 결과 카드 좋아요 버튼 (§11.4) ── */
+.btn-like { white-space: nowrap; }
+.btn-like.liked { background: var(--crown); border-color: var(--ink); }

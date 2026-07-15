@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Candidate, Mode } from '@/lib/types';
+import { track } from '@/lib/clientTrack';
 import DotIcon from './DotIcon';
 
 interface Props {
@@ -49,6 +51,17 @@ function accessLine(c: Candidate) {
 export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: Props) {
   const isDessert = mode === 'dessert';
   const priceText = c.priceNote ?? c.priceTier;
+
+  // 좋아요 — 추천 결과 만족도(§11.5). 결과가 바뀌면 새 가게이므로 초기화.
+  const [liked, setLiked] = useState(false);
+  useEffect(() => setLiked(false), [c.id]);
+
+  const evt = { mode, place: c.name, categorySub: c.categorySub };
+  const like = () => {
+    if (liked) return; // 한 번만 집계 (연타로 부풀지 않게)
+    setLiked(true);
+    track('like', evt);
+  };
 
   return (
     <div className="result-card frame">
@@ -109,12 +122,26 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
             ☎ {c.phone}
           </span>
         )}
-        <a className="btn btn-ghost" href={naverMapUrl(c)} target="_blank" rel="noreferrer">
+        <a
+          className="btn btn-ghost"
+          href={naverMapUrl(c)}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => track('map', evt)}
+        >
           네이버지도에서 보기
         </a>
       </div>
 
       <div className="row" style={{ marginTop: 12 }}>
+        <button
+          className={`btn btn-like${liked ? ' liked' : ''}`}
+          onClick={like}
+          aria-pressed={liked}
+          title={liked ? '좋아요 완료' : '이 추천이 마음에 들면 눌러주세요'}
+        >
+          {liked ? '💛 고마워요!' : '👍 좋아요'}
+        </button>
         <button className="btn btn-lg" style={{ flex: 1 }} onClick={onReroll} disabled={!canReroll}>
           🎰 다시 돌리기
         </button>

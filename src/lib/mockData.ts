@@ -1,4 +1,5 @@
 import type { Cafe, Restaurant } from './types';
+import type { StatRow } from './stats';
 
 // ── 관리자DB(구글 시트) mock — Phase 1용 큐레이션 맛집 ──────
 // Phase 0에서 실제 시트로 교체. 좌표는 양재/강남/서초 인근 실측 근사값.
@@ -451,4 +452,50 @@ export const MOCK_KAKAO_CAFES: KakaoPlace[] = [
   place('c7', '블루보틀 양재', '음식점 > 카페 > 커피전문점', '서울 서초구 양재동', 127.0498, 37.4935, ''),
   // 서비스 지역 밖(관악) — 확장해도 bbox로 걸러짐 시연 대비(1km보다 훨씬 멂이라 반경으로도 컷)
   place('c8', '관악 골목카페', '음식점 > 카페 > 커피전문점', '서울 관악구 봉천동', 126.9412, 37.4813, ''),
+];
+
+// ── 통계(stats) mock — 대시보드를 키 없이 개발·검증하기 위한 가짜 이벤트 ──────
+// USE_MOCK=TRUE일 때 loadStats()가 이걸 반환. 실제 시트 스키마(§11.3)와 동일한 모양.
+
+function statRow(
+  ts: string,
+  event: StatRow['event'],
+  visitor: string,
+  mode = '',
+  place = '',
+  categorySub = '',
+  detail = '',
+): StatRow {
+  return { ts, event, visitor, mode, place, categorySub, detail };
+}
+
+// 3일치 · 방문자 5명 · 룰렛 10회(재추첨 3) · 좋아요 4 · 지도 3
+export const MOCK_STAT_ROWS: StatRow[] = [
+  // — 1일차
+  statRow('20260713-113002', 'visit', 'v-aaa'),
+  statRow('20260713-113045', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=0;price=가성비;dist=walk;boost=1'),
+  statRow('20260713-113120', 'like', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
+  statRow('20260713-113135', 'map', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
+  statRow('20260713-120010', 'visit', 'v-bbb'),
+  statRow('20260713-120102', 'spin', 'v-bbb', 'lunch-group', '텐즈', '파스타·피자', 'respin=0;dist=walk;boost=0'),
+  statRow('20260713-120140', 'spin', 'v-bbb', 'lunch-group', '라드레쎄', '파스타·피자', 'respin=1;dist=walk;boost=0'),
+  // — 2일차
+  statRow('20260714-114500', 'visit', 'v-aaa'),
+  statRow('20260714-114533', 'spin', 'v-aaa', 'lunch-solo', '행복한칼국수', '칼국수', 'respin=0;price=가성비;dist=walk;boost=1'),
+  statRow('20260714-114610', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=1;price=가성비;dist=walk;boost=1'),
+  statRow('20260714-114650', 'like', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
+  statRow('20260714-130205', 'visit', 'v-ccc'),
+  statRow('20260714-130240', 'spin', 'v-ccc', 'dessert', '도곡 로스터스', '커피·음료', 'respin=0;boost=1'),
+  statRow('20260714-130310', 'map', 'v-ccc', 'dessert', '도곡 로스터스', '커피·음료'),
+  statRow('20260714-131500', 'visit', 'v-ddd'),
+  statRow('20260714-131540', 'spin', 'v-ddd', 'dessert', '카페시트롱', '케이크·디저트', 'respin=0;boost=0'),
+  statRow('20260714-131600', 'like', 'v-ddd', 'dessert', '카페시트롱', '케이크·디저트'),
+  // — 3일차
+  statRow('20260715-112000', 'visit', 'v-eee'),
+  statRow('20260715-112040', 'spin', 'v-eee', 'lunch-group', '등촌샤브칼국수 도곡점', '샤브샤브', 'respin=0;price=보통;dist=bike;boost=0'),
+  statRow('20260715-112120', 'spin', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕', 'respin=1;price=보통;dist=bike;boost=0'),
+  statRow('20260715-112200', 'like', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),
+  statRow('20260715-112215', 'map', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),
+  statRow('20260715-114000', 'visit', 'v-aaa'),
+  statRow('20260715-114030', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=0;price=가성비;dist=walk;boost=1'),
 ];

@@ -10,6 +10,8 @@ import Mascot from '@/components/Mascot';
 import DotIcon from '@/components/DotIcon';
 import { applyFilters, boostVisited, boostRecommended, weightedPick } from '@/lib/roulette';
 import { COMPANY_COORDS } from '@/lib/geo';
+import { track, trackVisitOnce } from '@/lib/clientTrack';
+import { formatDetail } from '@/lib/stats';
 
 type Screen = 'mode' | 'filter' | 'spinning' | 'result';
 
@@ -118,6 +120,7 @@ export default function Home() {
   // 사내용이라 위치인식 미사용 — 항상 군인공제회관(고정 시작점) 기준.
   useEffect(() => {
     setMounted(true);
+    trackVisitOnce();
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) setFilter({ ...DEFAULT_FILTER, ...JSON.parse(raw) });
@@ -159,6 +162,26 @@ export default function Home() {
     }
   };
 
+  // ── 통계 이벤트 (§11.4) — 실패해도 UX에 영향 없는 fire-and-forget ──
+  const trackSpin = useCallback(
+    (w: Candidate, isRespin: boolean) => {
+      const isLunch = mode === 'lunch-solo' || mode === 'lunch-group';
+      track('spin', {
+        mode: mode ?? '',
+        place: w.name,
+        categorySub: w.categorySub,
+        detail: formatDetail({
+          respin: isRespin,
+          // 예산·거리는 점심 전용 필터라 후식에선 빈 값(집계에서 자동 제외됨)
+          price: isLunch ? filter.priceTier : '',
+          dist: isLunch ? filter.distance : '',
+          boost: filter.prioritizeVisited,
+        }),
+      });
+    },
+    [mode, filter],
+  );
+
   const pickMode = (m: Mode) => {
     setMode(m);
     setScreen('filter');
@@ -199,7 +222,7 @@ export default function Home() {
 
   // ── 돌리기 ──
   const spin = useCallback(
-    async (prevSeen: string[]) => {
+    async (prevSeen: string[], isRespin = false) => {
       setLoading(true);
       let pool = candidates;
       // 후보 미로드거나 비었으면 로드
@@ -238,6 +261,7 @@ export default function Home() {
             setSeenIds([w.id]);
             setSpinKey((k) => k + 1);
             setScreen('spinning');
+            trackSpin(w, isRespin);
             return;
           }
         }
@@ -251,12 +275,13 @@ export default function Home() {
       setSeenIds((s) => [...s, w.id]);
       setSpinKey((k) => k + 1);
       setScreen('spinning');
+      trackSpin(w, isRespin);
     },
-    [candidates, filter, mode, loadCandidates],
+    [candidates, filter, mode, loadCandidates, trackSpin],
   );
 
-  const startSpin = () => spin(seenIds);
-  const reroll = () => spin(seenIds);
+  const startSpin = () => spin(seenIds, false);
+  const reroll = () => spin(seenIds, true);
 
   const pool = candidates;
   const recSub = mounted ? recommendSub(weather, new Date().getHours()) : REC_NICE[0];
