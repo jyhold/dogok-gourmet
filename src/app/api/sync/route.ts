@@ -11,13 +11,20 @@ import { syncNewCafes } from '@/lib/coffeeSync';
 //   드라이런:  /api/sync?key=<CRON_SECRET>&dry=1   ← 시트에 쓰지 않고 '신규 몇 곳인지'만 확인
 //   웹훅 점검: /api/sync?key=<CRON_SECRET>&ping=candidates|restaurants|coffee
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    const key = req.nextUrl.searchParams.get('key');
-    if (auth !== `Bearer ${secret}` && key !== secret) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-    }
+  // 이 라우트는 시트에 쓰고 카카오를 수백 번 호출한다 → 인증은 반드시 '닫힌 방향'으로.
+  // 예전엔 `if (secret) { ...검사... }` 라서 CRON_SECRET이 비면 검사를 통째로 건너뛰었다(fail-open).
+  // 변수를 실수로 지우면 누구나 스캔·쓰기를 트리거할 수 있었다.
+  const secret = (process.env.CRON_SECRET ?? '').trim();
+  if (!secret) {
+    return NextResponse.json(
+      { error: 'CRON_SECRET 미설정 — 인증 없이 열어두지 않습니다. 환경변수를 넣으세요.' },
+      { status: 503 },
+    );
+  }
+  const auth = req.headers.get('authorization');
+  const key = req.nextUrl.searchParams.get('key');
+  if (auth !== `Bearer ${secret}` && key !== secret) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
   const ping = req.nextUrl.searchParams.get('ping');
