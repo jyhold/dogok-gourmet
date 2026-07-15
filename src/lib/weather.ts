@@ -74,19 +74,13 @@ const PTY_LABEL: Record<number, string> = {
 };
 
 function buildInfo(pty: number, t1h: number | null, warnings: string[]): WeatherInfo {
-  const badWeather = pty !== 0 || warnings.length > 0;
-  let message: string | null = null;
-  if (pty !== 0) {
-    message = `☔ 지금 ${PTY_LABEL[pty] ?? '강수'} — 이동수단을 택시로 바꿨어요`;
-  } else if (warnings.length > 0) {
-    message = `⚠️ ${warnings.join(', ')} 발효 중 — 이동수단을 택시로 바꿨어요`;
-  }
+  // 사용자에게 보이는 날씨 문구는 프론트(page.tsx weatherLine)가 만든다.
+  // 예전엔 여기서 '이동수단을 택시로 바꿨어요' 메시지를 만들었지만 자동 전환이 폐지되며 함께 제거(v1.14).
   return {
     precipitationType: pty,
     temperature: t1h,
     warnings,
-    badWeather,
-    message,
+    badWeather: pty !== 0 || warnings.length > 0,
     unavailable: false,
   };
 }
@@ -113,7 +107,6 @@ export async function getWeather(): Promise<WeatherInfo> {
       temperature: null,
       warnings: [],
       badWeather: false,
-      message: null,
       unavailable: true,
     };
   }

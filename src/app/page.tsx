@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Candidate, Mode, WeatherInfo } from '@/lib/types';
 import ModeSelect from '@/components/ModeSelect';
 import FilterPanel, { type FilterState } from '@/components/FilterPanel';
@@ -113,9 +113,6 @@ export default function Home() {
   // 마운트 후에만 동적 씬(날씨·시각 기반) 렌더 → SSR 하이드레이션 불일치 방지
   const [mounted, setMounted] = useState(false);
 
-  const weatherAppliedRef = useRef(false);
-  const distanceTouchedRef = useRef(false);
-
   // ── 초기화: 저장된 필터 복원 + 날씨 ──
   // 사내용이라 위치인식 미사용 — 항상 군인공제회관(고정 시작점) 기준.
   useEffect(() => {
@@ -136,15 +133,8 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 악천후 자동 전환 (사용자가 거리 안 만졌을 때만) ──
-  useEffect(() => {
-    if (!weather || weatherAppliedRef.current) return;
-    weatherAppliedRef.current = true;
-    if (weather.badWeather && !distanceTouchedRef.current) {
-      setFilter((f) => ({ ...f, distance: 'taxi' }));
-      showToast(weather.message ?? '☔ 악천후 — 택시로 전환했어요', true, true);
-    }
-  }, [weather]);
+  // 악천후 시 거리를 택시로 자동 전환하던 기능은 v1.14에서 폐지.
+  // 날씨는 안내(하단 마스코트 말풍선·비 마스코트)와 메뉴 추천에만 쓰고, 이동수단은 사용자가 고른 대로 둔다.
 
   const showToast = (text: string, warn: boolean, rain = false) => {
     setToast({ text, warn, rain });
@@ -153,7 +143,6 @@ export default function Home() {
 
   // 필터 저장
   const updateFilter = (next: FilterState) => {
-    if (next.distance !== filter.distance) distanceTouchedRef.current = true;
     setFilter(next);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(next));

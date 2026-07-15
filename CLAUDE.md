@@ -15,7 +15,7 @@
 
 ## 외부 API (전부 서버 API Route 뒤, 키 노출 금지)
 - 카카오 로컬(REST) — 반경 검색. 점심=FD6(음식점) `/api/nearby`, 후식=CE7(카페) `/api/dessert?lat=&lng=`. 5분 캐시(격자+groupCode 키).
-- 기상청 초단기실황+특보 — 악천후 판정. `/api/weather`. 30분 캐시. 격자 고정 nx=61,ny=125.
+- 기상청 초단기실황+특보 — 악천후 판정. `/api/weather`. 30분 캐시. 격자 고정 nx=61,ny=125. **날씨는 안내·추천 전용 — 필터를 자동으로 바꾸지 않는다(v1.14에서 악천후→택시 자동전환 폐지).**
 - 구글 시트 gviz CSV — 관리자DB. 식당=`restaurants` 탭 `/api/restaurants`, 후식=`coffee` 탭(env `GOOGLE_COFFEE_SHEET_TAB`). 10분 캐시.
 
 `USE_MOCK=TRUE`(기본)면 전부 `src/lib/mockData.ts`로 대체 → Phase 0 키 없이 개발. (후식 mock: `MOCK_CAFES`, `MOCK_KAKAO_CAFES`)

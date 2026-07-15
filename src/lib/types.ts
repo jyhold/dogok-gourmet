@@ -140,10 +140,8 @@ export interface WeatherInfo {
   temperature: number | null;
   /** 특보 목록 (폭염/한파/호우 등) */
   warnings: string[];
-  /** 악천후 판정 → 거리 기본값 택시 전환 */
+  /** 악천후 판정 (강수 중이거나 특보 발효) — 안내·추천용. v1.14부터 필터를 바꾸지 않는다 */
   badWeather: boolean;
-  /** 사용자 안내 메시지 */
-  message: string | null;
   /** 날씨 API 사용 불가 시 true (조용히 비활성) */
   unavailable: boolean;
 }

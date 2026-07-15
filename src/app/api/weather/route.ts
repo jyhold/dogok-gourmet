@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
       temperature: 19,
       warnings: [],
       badWeather: true,
-      message: '☔ 지금 비 — 이동수단을 택시로 바꿨어요',
       unavailable: false,
     };
     return NextResponse.json(bad);
