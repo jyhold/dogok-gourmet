@@ -16,6 +16,10 @@ import {
   buildDessertCandidates,
   dessertDistanceWeight,
   DESSERT_NEAR_BOOST,
+  distancePrefWeight,
+  accessModeWeight,
+  DISTANCE_PREF_BOOST,
+  ACCESS_MODE_MATCH_BOOST,
 } from '../src/lib/candidates.ts';
 import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
 import {
@@ -372,4 +376,45 @@ test('aggregate: 빈 입력에도 안전 (0으로 나누기 금지)', () => {
   assert.equal(s.respinRate, 0);
   assert.equal(s.lastEventAt, null);
   assert.deepEqual(s.daily, []);
+});
+
+// ── 이동수단 선택 가중치 (v1.15) ──
+test('거리 선호: 도보=가까울수록↑, 택시=멀수록↑, 따릉이=중립', () => {
+  // 도보(반경 1300): 코앞이 최대, 반경 끝이 1배
+  assert.equal(distancePrefWeight(0, 'walk'), DISTANCE_PREF_BOOST);
+  assert.equal(distancePrefWeight(1300, 'walk'), 1);
+  assert.ok(distancePrefWeight(200, 'walk') > distancePrefWeight(1000, 'walk'));
+
+  // 택시(반경 5000): 정확히 반대 — 멀수록 최대
+  assert.equal(distancePrefWeight(0, 'taxi'), 1);
+  assert.equal(distancePrefWeight(5000, 'taxi'), DISTANCE_PREF_BOOST);
+  assert.ok(distancePrefWeight(4000, 'taxi') > distancePrefWeight(500, 'taxi'));
+
+  // 같은 500m 지점이라도 모드에 따라 선호가 뒤집힌다 (이 기능의 핵심)
+  assert.ok(distancePrefWeight(500, 'walk') > distancePrefWeight(500, 'taxi'));
+
+  // 따릉이는 중립 — 근/원 어느 쪽도 편들지 않는다
+  assert.equal(distancePrefWeight(0, 'bike'), 1);
+  assert.equal(distancePrefWeight(2000, 'bike'), 1);
+});
+test('거리 선호: 반경 밖·음수도 1~최대로 클램프', () => {
+  assert.equal(distancePrefWeight(99999, 'walk'), 1);
+  assert.equal(distancePrefWeight(-50, 'walk'), DISTANCE_PREF_BOOST);
+  assert.equal(distancePrefWeight(99999, 'taxi'), DISTANCE_PREF_BOOST);
+});
+test('access_mode 일치 부스트: 지정 모드와 같을 때만', () => {
+  assert.equal(accessModeWeight({ accessMode: 'taxi' }, 'taxi'), ACCESS_MODE_MATCH_BOOST);
+  assert.equal(accessModeWeight({ accessMode: 'taxi' }, 'walk'), 1);
+  assert.equal(accessModeWeight({ accessMode: 'walk' }, 'walk'), ACCESS_MODE_MATCH_BOOST);
+  // 카카오 실시간 결과는 access_mode가 없다 → 항상 1배
+  assert.equal(accessModeWeight({ accessMode: undefined }, 'taxi'), 1);
+});
+test('buildCandidates: 택시 지정 식당이 택시 모드에서 실제로 잘 뽑힌다', async () => {
+  // mock '언덕 위 감자탕' = 직선 350m지만 access_mode=taxi (가파른 언덕)
+  const taxi = await buildCandidates(COMPANY_COORDS, 'lunch-group', 'taxi');
+  const hill = taxi.candidates.find((c) => c.name === '언덕 위 감자탕')!;
+  assert.ok(hill, '택시 모드엔 나와야 함');
+  // 같은 거리대의 미지정 후보보다 가중치가 높아야 한다
+  const plain = taxi.candidates.find((c) => c.curated && !c.accessMode && c.distanceM < 1000);
+  if (plain) assert.ok(hill.weight > plain.weight, `택시 지정(${hill.weight}) > 미지정(${plain.weight})`);
 });
