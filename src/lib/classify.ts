@@ -1,11 +1,22 @@
 // ── 카카오 결과 → 시트 행 변환 + 잡음 필터 (시드/동기화 공용) ──
 import { mapKakaoCategory, estimatePriceTier, mapKakaoCafe } from './categories';
 
-/** 시트 헤더 20열 (A~T 순서, 시트 1행과 동일) */
+/** restaurants 시트 헤더 20열 (A~T 순서, 시트 1행과 동일) */
 export const SHEET_HEADER = [
   'name', 'category_main', 'category_sub', 'signature_menu', 'price_tier', 'price_note',
   'address', 'lat', 'lng', 'comment', 'active', 'weight', 'meal_type',
   'group_seating', 'group_capacity', 'phone', 'solo_friendly', 'visited', 'rating', 'access_mode',
+];
+
+// ── 예비 시트(candidates) 헤더 24열 (기획서 §12) ──
+// A~T는 restaurants와 **완전히 동일** — 승격이 열 정렬 신경 없는 단순 복사가 되도록.
+// 뒤 4열만 검증 메타.
+export const CANDIDATE_HEADER = [
+  ...SHEET_HEADER,
+  'google_rating', // U — 구글 평점(0~5). 미검증이면 빈칸
+  'google_reviews', // V — 구글 리뷰수
+  'verdict', // W — 빈칸=미검증 / pass / fail / miss / promoted
+  'checked_at', // X — YYYYMMDD-HHmmss (KST)
 ];
 
 /** classify/buildSheetRow가 쓰는 카카오 필드만 (KakaoPlace·KakaoDoc 둘 다 호환) */
@@ -38,7 +49,7 @@ function cell(v: string | undefined): string {
   return (v ?? '').replace(/[\t\r\n]+/g, ' ').trim();
 }
 
-/** 카카오 결과 → 시트 20열 행. 자동값만 채우고 큐레이션 칸(메뉴·평점·이동수단)은 빈 값. */
+/** 카카오 결과 → restaurants 20열 행. 자동값만 채우고 큐레이션 칸(메뉴·평점·이동수단)은 빈 값. */
 export function buildSheetRow(p: KakaoLike, mealType: string): string[] {
   const mapped = mapKakaoCategory(p.category_name);
   const address = p.road_address_name || p.address_name;
@@ -64,6 +75,14 @@ export function buildSheetRow(p: KakaoLike, mealType: string): string[] {
     '', // rating (손)
     '', // access_mode (손: 1=도보/2=따릉이/3=택시, 비우면 직선거리)
   ];
+}
+
+/**
+ * 카카오 결과 → candidates 24열 행 (검증 메타는 빈 값 = 미검증).
+ * A~T가 buildSheetRow와 동일하므로, 승격은 앞 20열만 잘라 restaurants에 넣으면 된다.
+ */
+export function buildCandidateRow(p: KakaoLike, mealType: string): string[] {
+  return [...buildSheetRow(p, mealType), '', '', '', ''];
 }
 
 // ── 후식(coffee) 시트 헤더 14열 (coffee 탭 1행과 동일) ──

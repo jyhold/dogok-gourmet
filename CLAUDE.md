@@ -25,6 +25,14 @@
 - **후식(coffee 시트)**: 평점 대신 `visited`+`recommended`(추천 T/F). 결과 카드에 '👍 미식가 추천'/'✅ 직접 방문' 배지(별점 없음). 필터 '👍 미식가 추천 우선' → `boostRecommended` recommended 가중치 ×6.
 - 메인 하단 마스코트: `weatherLine`+`recommendSub`(날씨 기반 추천). page.tsx.
 
+## 예비 시트 candidates (v1.16, `docs/candidates-setup.md`)
+신규 매장 자동 발견 파이프라인. **카카오 격자 스캔(무료·크론) → `candidates` → 구글 검증(수동·배치) → pass만 → `restaurants`(룰렛)**.
+- **카카오는 한 질의당 45건이 하드 상한** — 도보권에 844곳이 있는데 45곳만 보고 있었다. `kakaoScan.ts` `scanAll`이 사각 쿼드트리로 쪼개 전부 회수(2km에서 466호출·9.2초·포화 0). `kakao.ts` `searchNearby`(45건·5분 캐시)는 **룰렛 실시간용으로 그대로 둔다**.
+- **candidates 24열: A~T가 restaurants와 동일**(승격=앞 20열 복사) + google_rating/google_reviews/verdict/checked_at. 순서 바꾸면 승격이 깨진다.
+- **구글 평점은 Text Search Enterprise($35/1000·무료 월 1000)** — 카카오엔 평점 필드가 없다. 비용 안전규칙: ①수동 스크립트만 ②키는 `.env.local`만(Vercel 금지) ③**탈락분도 verdict에 기록**해 재조회 금지.
+- **gviz는 없는 탭을 요청하면 200 + 첫 탭(restaurants) 내용을 준다** — `candidatesSheet.ts`가 헤더 W열=`verdict`로 검증. Apps Script 폴백과 같은 부류의 함정.
+- `replace` 모드는 Apps Script에서 **candidates 전용**으로 막아둠(restaurants 실수 삭제 방지).
+
 ## 관리자 통계 (v1.13, `docs/stats-setup.md`)
 `/stats` — 페이지 내 비밀번호(`STATS_KEY`) 입력 후 방문자·룰렛·좋아요·지도클릭 통계. 저장소는 시트 `stats` 탭(7열), 쓰기는 기존 Apps Script 웹훅 재사용.
 - **⚠️ Apps Script는 모르는 탭을 restaurants로 조용히 폴백했었다** — `ALLOWED`에 `stats` 추가 + 폴백 제거가 선행 조건. `statsSink.ts`가 응답의 `sheet`를 검증해 다르면 영구 차단(관리자DB 오염 방지). `STATS_ENABLED=TRUE`로 이중 잠금.
@@ -38,6 +46,7 @@
   - 카카오는 **샤브샤브를 최상위 대분류**로 준다(`음식점 > 샤브샤브`) — 한식 밑이 아니므로 전용 규칙 필수. 없으면 기타로 떨어져 점심 룰렛에서 통째로 누락됨. + 예산추정 + 혼밥휴리스틱 + **후식 5종(`DESSERT_SUBS`)·`mapKakaoCafe`(CE7)**
 - `src/lib/geo.ts` 하버사인×1.3 보정, 서비스 바운딩박스, 행정구역 필터, 회사좌표 fallback
 - `src/lib/sheet.ts`(식당) · **`src/lib/coffeeSheet.ts`(후식, `loadCafes`)** · `src/lib/kakao.ts`(groupCode FD6/CE7) · `src/lib/weather.ts` 외부 소스 로더 (mock 폴백 내장)
+- **발견 파이프라인**: `kakaoScan.ts`(격자 스캔) · `candidatesSheet.ts`(예비 시트 읽기+헤더 검증) · `googlePlaces.ts`(평점 조회+게이트) · `sheetWebhook.ts`(쓰기 공용, 응답 `sheet` 검증) · `sheetSync.ts`(스캔→candidates) · `scripts/verify-candidates.mts`(**수동 검증+승격, 유일한 과금 지점**)
 - `src/lib/candidates.ts` ★ 점심 `buildCandidates` + **후식 `buildDessertCandidates`(위치 300m/폴백 500m·자동확장)** + 중복병합(이름+50m, DB우선) + 가중치
 - `src/lib/roulette.ts` 프론트 필터 + 가중치 추첨(`boostVisited`/**`boostRecommended`**)
 - **통계**: `src/lib/stats.ts`(타임스탬프·detail 인코딩·`aggregate` 순수함수) · `statsSink.ts`(쓰기+오염방지) · `statsSheet.ts`(읽기) · `clientTrack.ts`(익명ID·sendBeacon) · `src/app/stats/page.tsx` + `components/StatsCharts.tsx`

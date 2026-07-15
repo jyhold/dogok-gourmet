@@ -549,3 +549,69 @@ Vercel Web Analytics는 무료로 방문자 수를 주지만 **vercel.com 대시
 - 시트는 이벤트 로그에 최적이 아니다. 하루 수백 건 수준까지가 안전선. 그 이상이면 KV로 이전.
 - Apps Script 동시 append 경합 가능성 (사내 트래픽에선 무시 가능).
 - JS를 실행하는 클라이언트만 기록 → 크롤러는 자연히 제외되지만, 정확한 UV는 아님.
+
+---
+
+## 12. 예비 시트(candidates) 파이프라인 (v1.16)
+
+### 12.1 문제 — 카카오 45건 한계
+카카오 로컬 검색은 **한 질의당 최대 45건**(3페이지×15)만 준다. `meta.total_count`는 진짜 총계를
+알려주지만 그 이상은 못 가져온다. 그래서 `/api/sync`가 매일 돌아도 신규 매장을 사실상 못 찾았다.
+
+| 반경 | `total_count` | 기존 회수 | 격자 스캔 회수 |
+|---|---|---|---|
+| 200m | 37 | 37 | 37 |
+| 1,300m | **844** | 45 (5%) | **845** |
+| 1,500m | 1,365 | 45 (3%) | — |
+| 2,000m | 3,479 | 45 (1%) | **2,617** (4개구 필터 후) |
+
+### 12.2 해법 1 — 적응형 격자 스캔 (`kakaoScan.ts`)
+반경 200m면 45건 미만이라 전부 회수된다. 영역을 **사각 쿼드트리**로 쪼개 각 셀이 45건 미만이 되게 한다.
+- 셀(정사각형)을 덮는 원의 반경 = 반변길이 × √2
+- `total_count > 45`인 셀만 4등분 재귀 → 밀집 지역만 깊게, 한산한 곳은 1회로 끝
+- 안전핀: `MIN_HALF_SIDE_M`(60m) 이하로는 안 쪼갬 · `maxCalls`(기본 400) 상한 · 동시 6
+- 실측: 반경 2km에서 **466회 호출 · 9.2초 · 포화 셀 0개**. Vercel Hobby 함수 상한 300초라 여유.
+
+`kakao.ts`의 `searchNearby`(45건·5분 캐시)는 **룰렛 실시간 검색용으로 그대로 둔다** — 룰렛은
+반경 내 일부만 있어도 되고, 격자 스캔은 느리고 호출이 많아 매 요청에 쓸 수 없다.
+
+### 12.3 해법 2 — 오염·비용 격리
+2,000곳을 `restaurants`에 그대로 넣으면 손으로 큐레이션한 236행이 미검증 행에 묻힌다.
+→ **예비 시트 `candidates` 신설**. 룰렛은 이 시트를 보지 않는다.
+
+```
+카카오 격자 스캔(무료·크론) → candidates → 구글 검증(수동·배치) → pass만 → restaurants(룰렛)
+```
+
+### 12.4 candidates 스키마 (24열)
+**A~T는 restaurants 20열과 완전히 동일** (승격 = 앞 20열 복사) + `google_rating`(U) /
+`google_reviews`(V) / `verdict`(W: 빈칸·pass·fail·miss·promoted) / `checked_at`(X).
+`checked_at`은 `stats.ts`의 `toKstStamp()` 재사용 — ISO로 쓰면 시트가 날짜 셀로 바꿔 깨진다(§11.3).
+
+### 12.5 구글 교차검증 — 비용 구조 (2026-07 확인)
+카카오 응답엔 평점·리뷰수 필드가 **아예 없다**(확인함). 구글은 있지만
+`rating`/`userRatingCount`가 **Enterprise 등급**이라:
+
+| SKU | 단가 | 무료/월 |
+|---|---|---|
+| Text Search **Enterprise** (평점 O) | **$35/1,000** | **1,000회** |
+| Text Search Pro (평점 X) | $32/1,000 | 5,000회 |
+
+**절대 규칙 3가지** — 안 지키면 월 $2,000이 나온다:
+1. **수동 실행 전용** (`scripts/verify-candidates.mts`), 배치 상한 필수
+2. **키는 `.env.local`에만.** Vercel엔 넣지 않는다 → 서버가 호출할 경로 자체를 없앤다
+3. **탈락분도 시트에 기록**(`verdict=fail`) → 재조회 안 함. 이게 없으면 매일 2,000건 재조회
+
+### 12.6 조용한 폴백 2종 (이 프로젝트를 두 번 문 함정)
+- **Apps Script**: 모르는 탭 → 에러 대신 restaurants에 씀 → `ALLOWED` + 폴백 제거 + 응답 `sheet` 검증
+- **구글 시트 gviz**: 없는 탭 요청 → **404가 아니라 200 + 첫 번째 탭 내용** → `candidatesSheet.ts`가
+  헤더 W열이 `verdict`인지 확인해 막는다. 안 막으면 restaurants 235행을 '미검증 후보'로 착각해
+  구글 조회비를 태우게 된다.
+
+### 12.7 운영 절차
+1. 크론(매일 정오) → `/api/sync` → 격자 스캔 → candidates에 신규 append
+2. 수동: `npx tsx scripts/verify-candidates.mts 100 --max-dist 800`
+3. pass → restaurants 자동 승격 (승격 직전 중복 재확인 → 재실행 안전)
+4. 승격 후 손으로: `signature_menu` / `solo_friendly` / `access_mode` / `visited`·`rating`
+
+상세는 `docs/candidates-setup.md`.

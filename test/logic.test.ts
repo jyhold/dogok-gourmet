@@ -8,7 +8,14 @@ import {
   SOLO_EXCLUDED_SUBS,
   DESSERT_MAIN,
 } from '../src/lib/categories.ts';
-import { buildCafeRow, COFFEE_SHEET_HEADER } from '../src/lib/classify.ts';
+import {
+  buildCafeRow,
+  buildSheetRow,
+  buildCandidateRow,
+  COFFEE_SHEET_HEADER,
+  SHEET_HEADER,
+  CANDIDATE_HEADER,
+} from '../src/lib/classify.ts';
 import { haversineMeters, inAllowedDistrict, inServiceArea, reachableInMode, COMPANY_COORDS } from '../src/lib/geo.ts';
 import { applyFilters, boostVisited, boostRecommended, weightedPick, VISITED_BOOST } from '../src/lib/roulette.ts';
 import {
@@ -22,6 +29,8 @@ import {
   ACCESS_MODE_MATCH_BOOST,
 } from '../src/lib/candidates.ts';
 import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
+import { scanAll } from '../src/lib/kakaoScan.ts';
+import { passesGate } from '../src/lib/googlePlaces.ts';
 import {
   aggregate,
   toKstStamp,
@@ -257,6 +266,33 @@ test('buildDessertCandidates: 현재 위치 기준 300m는 더 촘촘하게 컷'
   assert.ok(!candidates.some((c) => c.name === '매봉 디저트카페'));
 });
 
+// ── 시트 행 스키마 정합 ──
+// SHEET_HEADER는 코드 어디서도 안 쓰이는 export라, 한 번 조용히 20→22열로 어긋난 적이 있다.
+// 헤더와 행 빌더가 따로 놀면 시트 열이 통째로 밀리므로 여기서 못박는다.
+const SAMPLE_PLACE = {
+  place_name: '테스트식당',
+  category_name: '음식점 > 한식 > 국밥',
+  address_name: '서울 강남구 도곡동',
+  road_address_name: '서울 강남구 남부순환로 2800',
+  x: '127.0529',
+  y: '37.4891',
+  phone: '02-000-0000',
+};
+test('buildSheetRow: 열 개수가 SHEET_HEADER와 일치', () => {
+  assert.equal(buildSheetRow(SAMPLE_PLACE, '둘다').length, SHEET_HEADER.length);
+});
+test('buildCandidateRow: 24열 + 앞 20열은 restaurants와 동일', () => {
+  const cand = buildCandidateRow(SAMPLE_PLACE, '둘다');
+  assert.equal(cand.length, CANDIDATE_HEADER.length);
+  assert.equal(CANDIDATE_HEADER.length, SHEET_HEADER.length + 4);
+  // 승격 = 앞 20열 그대로 복사. 어긋나면 restaurants 열이 밀린다.
+  assert.deepEqual(cand.slice(0, SHEET_HEADER.length), buildSheetRow(SAMPLE_PLACE, '둘다'));
+  // 검증 메타 4칸은 비어 있어야(=미검증) 한다
+  assert.deepEqual(cand.slice(SHEET_HEADER.length), ['', '', '', '']);
+  // A~T가 같으므로 헤더도 같은 순서여야 한다
+  assert.deepEqual(CANDIDATE_HEADER.slice(0, SHEET_HEADER.length), SHEET_HEADER);
+});
+
 // ── 후식 동기화: 시트 행 스키마 정합 ──
 test('buildCafeRow: 열 개수가 COFFEE_SHEET_HEADER와 일치', () => {
   const row = buildCafeRow({
@@ -417,4 +453,37 @@ test('buildCandidates: 택시 지정 식당이 택시 모드에서 실제로 잘
   // 같은 거리대의 미지정 후보보다 가중치가 높아야 한다
   const plain = taxi.candidates.find((c) => c.curated && !c.accessMode && c.distanceM < 1000);
   if (plain) assert.ok(hill.weight > plain.weight, `택시 지정(${hill.weight}) > 미지정(${plain.weight})`);
+});
+
+// ── 격자 스캔 (§12) ──
+test('scanAll: mock 모드는 네트워크를 타지 않고 반경 내 mock만 반환', async () => {
+  // USE_MOCK 기본값(TRUE) — 테스트가 카카오를 호출하면 키 없이 실패하거나 과금된다
+  const { places, stats } = await scanAll(COMPANY_COORDS, 2000, 'FD6');
+  assert.ok(places.length > 0, 'mock 후보가 나와야 함');
+  assert.equal(stats.calls, 0, 'mock인데 API를 호출하면 안 됨');
+  // 반경 밖(관악 등)은 걸러져야 함
+  assert.ok(
+    places.every((p) => haversineMeters(COMPANY_COORDS, { lat: Number(p.y), lng: Number(p.x) }) <= 2000),
+    '반경 밖이 섞이면 안 됨',
+  );
+});
+
+// ── 구글 품질 게이트 (§12) ──
+const GATE = { minRating: 4.0, minReviews: 200 };
+test('passesGate: 평점 4.0 이상 또는 리뷰 200 이상', () => {
+  // 평점만 좋아도 통과
+  assert.equal(passesGate({ rating: 4.2, reviews: 3 }, GATE), true);
+  // 리뷰만 많아도 통과 (평점이 낮아도 — 사용자가 정한 'or' 규칙)
+  assert.equal(passesGate({ rating: 3.1, reviews: 500 }, GATE), true);
+  // 경계값은 포함
+  assert.equal(passesGate({ rating: 4.0, reviews: 0 }, GATE), true);
+  assert.equal(passesGate({ rating: 1.0, reviews: 200 }, GATE), true);
+  // 둘 다 미달이면 탈락
+  assert.equal(passesGate({ rating: 3.9, reviews: 199 }, GATE), false);
+});
+test('passesGate: 평점을 못 받으면 통과시키지 않는다', () => {
+  // 신규 오픈·매칭 실패 — 모르는 곳을 큐레이션 DB에 올리지 않는다
+  assert.equal(passesGate({ rating: null, reviews: null, miss: 'no-result' }, GATE), false);
+  assert.equal(passesGate({ rating: null, reviews: null, miss: 'too-far' }, GATE), false);
+  assert.equal(passesGate({ rating: null, reviews: 999 }, GATE), true); // 리뷰수는 받았다면 인정
 });
