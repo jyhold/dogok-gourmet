@@ -50,7 +50,9 @@ function accessLine(c: Candidate) {
 
 export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: Props) {
   const isDessert = mode === 'dessert';
-  const priceText = c.priceNote ?? c.priceTier;
+  // 예산 슬롯은 항상 price_tier만 표시 — 관리자DB값 우선, 없으면 카카오 추정(priceEstimated).
+  // priceNote(자유 텍스트, 예: '인당 1.5만')는 여기에 섞지 않는다(표기 통일).
+  const priceText = c.priceTier;
 
   // 좋아요 — 추천 결과 만족도(§11.5). 결과가 바뀌면 새 가게이므로 초기화.
   const [liked, setLiked] = useState(false);
