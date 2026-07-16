@@ -80,6 +80,13 @@ test("카카오 매핑: '국수'가 쌀국수·칼국수를 빼앗지 않는다"
   // 그 외 일반 국수집은 분식으로
   assert.equal(mapKakaoCategory('음식점 > 한식 > 국수').sub, '국수·우동');
 });
+test('카카오 매핑: 홍콩·딤섬은 만두·중식보다 먼저 잡힌다', () => {
+  assert.deepEqual(mapKakaoCategory('음식점 > 중식 > 딤섬,만두'), { main: '아시안', sub: '홍콩·딤섬' });
+  assert.equal(mapKakaoCategory('음식점 > 중식 > 홍콩요리').sub, '홍콩·딤섬');
+  assert.equal(mapKakaoCategory('음식점 > 중식 > 완탕면').sub, '홍콩·딤섬');
+  // 일반 중식(홍콩반점류: category_name에 '홍콩' 없음)은 그대로 짜장·짬뽕
+  assert.equal(mapKakaoCategory('음식점 > 중식 > 중국집').sub, '짜장·짬뽕');
+});
 test('카카오 매핑 실패 → 기타', () => {
   assert.equal(mapKakaoCategory('음식점 > 알수없는것').main, '기타');
   assert.equal(mapKakaoCategory('').main, '기타');
