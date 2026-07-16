@@ -91,10 +91,13 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
 
       <div className="meta-line">
         <span>{accessLine(c)}</span>
-        <span>
-          💰 <b>{priceText}</b>
-          {c.priceEstimated && ' (추정)'}
-        </span>
+        {/* 후식은 예산 개념이 없어(항상 '보통' 플레이스홀더) 예산 슬롯을 숨긴다 */}
+        {!isDessert && (
+          <span>
+            💰 <b>{priceText}</b>
+            {c.priceEstimated && ' (추정)'}
+          </span>
+        )}
       </div>
 
       {c.comment && <div className="comment">💬 {c.comment}</div>}
