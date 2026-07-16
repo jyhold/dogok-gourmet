@@ -27,6 +27,7 @@ const SUB_SLUG: Record<string, string> = {
   '쌀국수·베트남': 'pho',
   '태국·팟타이': 'thai',
   '인도·커리': 'curry',
+  '홍콩·딤섬': 'dimsum',
   '샐러드·포케': 'salad',
   '샌드위치·브런치': 'sandwich',
   '도시락': 'bento',
