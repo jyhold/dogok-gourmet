@@ -111,6 +111,8 @@ export async function fetchRating(name: string, at: Coords): Promise<PlaceRating
 export interface QualityGate {
   minRating: number;
   minReviews: number;
+  /** 평점으로 통과할 때 요구하는 최소 리뷰 수 — 리뷰 1~2개짜리 ★5는 표본이 없는 것 */
+  minRatingReviews: number;
   /** 지뢰 컷 — 이 평점 이하면 리뷰가 아무리 많아도 탈락 (많은 사람이 별로라고 한 곳) */
   badRating: number;
 }
@@ -119,6 +121,7 @@ export function qualityGate(): QualityGate {
   return {
     minRating: Number(process.env.MIN_GOOGLE_RATING ?? 4.0),
     minReviews: Number(process.env.MIN_GOOGLE_REVIEWS ?? 200),
+    minRatingReviews: Number(process.env.MIN_RATING_REVIEWS ?? 10),
     badRating: Number(process.env.BAD_GOOGLE_RATING ?? 3.0),
   };
 }
@@ -127,12 +130,16 @@ export function qualityGate(): QualityGate {
  * 통과 판정.
  * ① **지뢰 컷**: 평점이 badRating(기본 3.0) 이하면 무조건 탈락 — 리뷰가 많다는 건 검증됐다는
  *    뜻인데도 평점이 낮으면 오히려 '많은 사람이 별로라고 한' 피해야 할 곳이다.
- * ② 그 위에서 통과: 평점 ≥ minRating **또는** 리뷰 ≥ minReviews.
+ * ② 리뷰 ≥ minReviews(200) 이면 통과 — 표본이 충분히 크면 평점이 좀 낮아도 유명한 곳.
+ * ③ 평점 ≥ minRating(4.0) **그리고** 리뷰 ≥ minRatingReviews(10) 이면 통과.
+ *    평점만으로 통과시키되 리뷰 하한을 둬서, 리뷰 1~2개짜리 ★5(표본 없음)를 거른다.
  * 평점을 못 받은 곳(신규 오픈·매칭 실패)은 통과시키지 않는다.
  */
 export function passesGate(r: PlaceRating, gate: QualityGate = qualityGate()): boolean {
-  if (r.rating != null && r.rating <= gate.badRating) return false; // 지뢰 컷 (리뷰 수 무관)
-  if (r.rating != null && r.rating >= gate.minRating) return true;
-  if (r.reviews != null && r.reviews >= gate.minReviews) return true;
+  if (r.rating != null && r.rating <= gate.badRating) return false; // ① 지뢰 컷 (리뷰 수 무관)
+  if (r.reviews != null && r.reviews >= gate.minReviews) return true; // ② 리뷰 많으면 통과
+  if (r.rating != null && r.rating >= gate.minRating && (r.reviews ?? 0) >= gate.minRatingReviews) {
+    return true; // ③ 평점 좋고 + 리뷰 하한 충족
+  }
   return false;
 }

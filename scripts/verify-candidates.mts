@@ -76,7 +76,7 @@ async function main() {
   console.log(`■ candidates ${rows.length}행 · 미검증 ${totalUnchecked}행`);
   if (Number.isFinite(MAX_DIST)) console.log(`   ${MAX_DIST}m 이내 미검증: ${unchecked.length}행`);
   console.log(`   이번 대상: ${target.length}건 (배치 ${BATCH})`);
-  console.log(`   통과 기준: (평점 ≥ ${gate.minRating} 또는 리뷰 ≥ ${gate.minReviews}) · 단 평점 ≤ ${gate.badRating}이면 리뷰 무관 탈락`);
+  console.log(`   통과 기준: 리뷰 ≥ ${gate.minReviews}  또는  (평점 ≥ ${gate.minRating} 그리고 리뷰 ≥ ${gate.minRatingReviews}) · 단 평점 ≤ ${gate.badRating}이면 무조건 탈락`);
   console.log(`\n■ 비용 (구글 Text Search Enterprise $${PRICE_PER_1K}/1,000 · 무료 월 ${FREE_PER_MONTH}회)`);
   console.log(`   이번 실행: 최대 ${target.length}회 → 무료 한도 내면 $0, 전부 유료면 ${money((target.length / 1000) * PRICE_PER_1K)}`);
   console.log(`   남은 것 전부: ${unchecked.length}회 → 유료분 ${money((Math.max(0, unchecked.length - FREE_PER_MONTH) / 1000) * PRICE_PER_1K)}\n`);

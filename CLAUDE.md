@@ -30,7 +30,7 @@
 - **카카오는 한 질의당 45건이 하드 상한** — 도보권에 844곳이 있는데 45곳만 보고 있었다. `kakaoScan.ts` `scanAll`이 사각 쿼드트리로 쪼개 전부 회수(2km에서 466호출·9.2초·포화 0). `kakao.ts` `searchNearby`(45건·5분 캐시)는 **룰렛 실시간용으로 그대로 둔다**.
 - **candidates 24열: A~T가 restaurants와 동일**(승격=앞 20열 복사) + google_rating/google_reviews/verdict/checked_at. 순서 바꾸면 승격이 깨진다.
 - **구글 평점은 Text Search Enterprise($35/1000·무료 월 1000)** — 카카오엔 평점 필드가 없다. 비용 안전규칙: ①수동 스크립트만 ②키는 `.env.local`만(Vercel 금지) ③**탈락분도 verdict에 기록**해 재조회 금지.
-- 품질 게이트(`passesGate`): (평점≥4.0 OR 리뷰≥200) **AND 평점>3.0 지뢰컷** — 리뷰 많아도 평점 3.0 이하면 탈락. env `MIN_GOOGLE_RATING`/`MIN_GOOGLE_REVIEWS`/`BAD_GOOGLE_RATING`.
+- 품질 게이트(`passesGate`): 리뷰≥200 **OR** (평점≥4.0 AND 리뷰≥10), 그리고 **평점≤3.0이면 무조건 탈락(지뢰컷)**. 리뷰 하한은 리뷰 1~2개짜리 ★5(표본 없음) 방지. env `MIN_GOOGLE_RATING`/`MIN_GOOGLE_REVIEWS`/`MIN_RATING_REVIEWS`/`BAD_GOOGLE_RATING`.
 - **gviz는 없는 탭을 요청하면 200 + 첫 탭(restaurants) 내용을 준다** — `candidatesSheet.ts`가 헤더 W열=`verdict`로 검증. Apps Script 폴백과 같은 부류의 함정.
 - `replace` 모드는 Apps Script에서 **candidates 전용**으로 막아둠(restaurants 실수 삭제 방지).
 
