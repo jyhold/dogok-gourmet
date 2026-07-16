@@ -45,6 +45,27 @@ export const MOCK_RESTAURANTS: Restaurant[] = [
     soloFriendly: true,
   },
   {
+    // 회귀: solo_friendly=FALSE인데 카테고리(중식 짜장·짬뽕)는 혼밥친화라,
+    // 카카오 트윈(kj)이 혼밥 필터를 통과해 룰렛에 재등장하던 버그. dropCuratedDupes로 차단.
+    name: '크리스탈제이드 도곡점',
+    categoryMain: '중식',
+    categorySub: '짜장·짬뽕',
+    signatureMenu: '샤오롱바오',
+    visited: false,
+    priceTier: '보통',
+    priceNote: '인당 2.5만',
+    address: '서울 강남구 남부순환로 2810',
+    lat: 37.4885,
+    lng: 127.0545,
+    comment: '딤섬 위주. 2인 이상 권장',
+    active: true,
+    weight: 1,
+    mealType: '둘다',
+    groupSeating: true,
+    phone: '02-529-1234',
+    soloFriendly: false,
+  },
+  {
     name: '강남 스시하나',
     categoryMain: '일식',
     categorySub: '초밥·회',
@@ -330,6 +351,8 @@ export const MOCK_KAKAO_PLACES: KakaoPlace[] = [
   place('k16', '미분당 강남', '음식점 > 아시아음식 > 베트남음식', '서울 강남구 역삼동', 127.0269, 37.4968, ''),
   place('k17', '오늘도청춘 방배', '음식점 > 한식 > 육류,고기', '서울 서초구 방배동', 126.9968, 37.4802, '02-599-3300'),
   place('k18', '샐러디 강남역점', '음식점 > 양식 > 샐러드', '서울 강남구 역삼동', 127.0278, 37.4989, ''),
+  // 회귀: 크리스탈제이드 도곡점의 카카오 트윈 (관리자DB solo_friendly=FALSE와 동일 매장)
+  place('kj', '크리스탈제이드 도곡', '음식점 > 중식 > 중국집', '서울 강남구 도곡동', 127.0545, 37.4885, '02-529-1234'),
   // 서비스 지역 밖 (관악구) — 필터로 걸러져야 함
   place('k19', '서울대입구 백반집', '음식점 > 한식 > 백반,가정식', '서울 관악구 봉천동', 126.9412, 37.4813, ''),
   place('k20', '태국식당 방콕 송파', '음식점 > 아시아음식 > 태국음식', '서울 송파구 잠실동', 127.0855, 37.5112, '02-421-7788'),

@@ -126,17 +126,23 @@ function kakaoToCandidate(p: KakaoPlace, center: Coords): Candidate {
 }
 
 // ── 중복 병합 (이름+좌표 50m 근접 → 관리자DB 우선, 병목 7) ────
+
+/** 카카오 후보 k가 관리자DB 후보 중 하나와 동일 매장인가 (이름+50m) */
+function isCuratedDup(k: Candidate, curated: Candidate[]): boolean {
+  return curated.some(
+    (c) =>
+      haversineMeters({ lat: c.lat, lng: c.lng }, { lat: k.lat, lng: k.lng }) <= 50 &&
+      (c.name.includes(k.name) || k.name.includes(c.name) || sameCore(c.name, k.name)),
+  );
+}
+
+/** 카카오 후보에서 관리자DB와 중복되는 것을 제거 (DB우선) */
+function dropCuratedDupes(kakao: Candidate[], curated: Candidate[]): Candidate[] {
+  return kakao.filter((k) => !isCuratedDup(k, curated));
+}
+
 function dedupe(curated: Candidate[], kakao: Candidate[]): Candidate[] {
-  const result = [...curated];
-  for (const k of kakao) {
-    const dup = curated.some(
-      (c) =>
-        haversineMeters({ lat: c.lat, lng: c.lng }, { lat: k.lat, lng: k.lng }) <= 50 &&
-        (c.name.includes(k.name) || k.name.includes(c.name) || sameCore(c.name, k.name)),
-    );
-    if (!dup) result.push(k);
-  }
-  return result;
+  return [...curated, ...dropCuratedDupes(kakao, curated)];
 }
 
 /** 상호 핵심어(지점명 제거) 일치 검사 */
@@ -185,6 +191,13 @@ export async function buildCandidates(
   kakaoCands = applyDistanceMode(kakaoCands, distance);
   curatedCands = applyDistanceMode(curatedCands, distance);
 
+  // ★ 카카오에서 관리자DB와 중복되는 매장을 먼저 제거 (DB우선, 병목 1).
+  //   반드시 아래 solo_friendly 필터 '이전'에 전체 curated 기준으로 해야 한다.
+  //   그러지 않으면 DB가 미검증(solo_friendly=FALSE)으로 뺀 매장을, 카카오 실시간
+  //   결과가 카테고리 휴리스틱만으로 되살린다. (예: 크리스탈제이드 도곡점이
+  //   solo_friendly=FALSE인데 중식(짜장·짬뽕=혼밥친화)으로 매핑돼 혼밥 룰렛에 재등장)
+  kakaoCands = dropCuratedDupes(kakaoCands, curatedCands);
+
   // 3) 모드별 후보 구성
   if (mode === 'lunch-solo') {
     // 혼밥(엄격): 관리자DB는 solo_friendly=TRUE만 출현. FALSE는 미검증으로 보고 제외한다.
@@ -207,7 +220,8 @@ export async function buildCandidates(
   }
   // lunch-group: 전 카테고리, 예산 필터는 프론트에서 (기본 동작)
 
-  const merged = dedupe(curatedCands, kakaoCands);
+  // 카카오는 위에서 이미 관리자DB와 중복 제거됨 → 여기선 단순 합치기
+  const merged = [...curatedCands, ...kakaoCands];
   return { candidates: merged };
 }
 
