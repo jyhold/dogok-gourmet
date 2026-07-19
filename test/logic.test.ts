@@ -87,6 +87,13 @@ test('카카오 매핑: 홍콩·딤섬은 만두·중식보다 먼저 잡힌다'
   // 일반 중식(홍콩반점류: category_name에 '홍콩' 없음)은 그대로 짜장·짬뽕
   assert.equal(mapKakaoCategory('음식점 > 중식 > 중국집').sub, '짜장·짬뽕');
 });
+test('카카오 매핑: 멕시칸·타코 (타코야끼 오분류 방지)', () => {
+  // 카카오는 멕시칸을 '양식 > 멕시칸,브라질'로 준다 (타코 전문점 포함)
+  assert.deepEqual(mapKakaoCategory('음식점 > 양식 > 멕시칸,브라질'), { main: '양식', sub: '멕시칸·타코' });
+  assert.equal(mapKakaoCategory('음식점 > 양식 > 멕시칸,브라질 > 도스타코스').sub, '멕시칸·타코');
+  // ⚠️ '타코'를 키워드로 쓰면 '타코야끼'(간식)를 멕시칸으로 오인한다 → '멕시칸'만 쓰므로 안전
+  assert.notEqual(mapKakaoCategory('음식점 > 간식 > 호시타코야끼').sub, '멕시칸·타코');
+});
 test('카카오 매핑 실패 → 기타', () => {
   assert.equal(mapKakaoCategory('음식점 > 알수없는것').main, '기타');
   assert.equal(mapKakaoCategory('').main, '기타');

@@ -24,6 +24,7 @@ const SUB_SLUG: Record<string, string> = {
   '파스타·피자': 'pizza',
   '버거': 'burger',
   '스테이크·비스트로': 'steak',
+  '멕시칸·타코': 'taco',
   '쌀국수·베트남': 'pho',
   '태국·팟타이': 'thai',
   '인도·커리': 'curry',
