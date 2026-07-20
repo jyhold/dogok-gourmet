@@ -270,7 +270,14 @@ export default function Home() {
   );
 
   const startSpin = () => spin(seenIds, false);
-  const reroll = () => spin(seenIds, true);
+  const reroll = () => {
+    // 다시 돌리기 = 화면에 뜬 식당을 '반려'. spin이 새 winner로 덮기 전에 현재 식당을 기록.
+    // 이 식당이 곧 기피 식당 카운트의 대상. fire-and-forget이라 UX 영향 없음.
+    if (winner) {
+      track('reject', { mode: mode ?? '', place: winner.name, categorySub: winner.categorySub });
+    }
+    spin(seenIds, true);
+  };
 
   const pool = candidates;
   const recSub = mounted ? recommendSub(weather, new Date().getHours()) : REC_NICE[0];

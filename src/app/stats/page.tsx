@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { StatsSummary } from '@/lib/stats';
-import { BarList, DailyChart, ModeChart, TopPlaces, pct } from '@/components/StatsCharts';
+import { BarList, DailyChart, ModeChart, TopPlaces, TopRejected, pct } from '@/components/StatsCharts';
 import Mascot from '@/components/Mascot';
 
 // ── 관리자 통계 대시보드 (기획서 §11) ───────────────────────
@@ -179,6 +179,7 @@ export default function StatsPage() {
         <Kpi label="좋아요율" value={pct(s.likeRate)} sub={`${s.likes}/${s.spins}`} />
         <Kpi label="지도 클릭율" value={pct(s.mapRate)} sub={`${s.maps}/${s.spins}`} />
         <Kpi label="재추첨률" value={pct(s.respinRate)} sub={`${s.respins}/${s.spins}`} />
+        <Kpi label="기피율" value={pct(s.rejectRate)} sub={`${s.rejects}/${s.spins}`} />
       </div>
 
       <Section title="📈 일별 추이" hint="최근 14일">
@@ -191,6 +192,10 @@ export default function StatsPage() {
 
       <Section title="🏆 당첨 TOP 10" hint="👍는 그 가게에 눌린 좋아요 수">
         <TopPlaces places={s.topPlaces} />
+      </Section>
+
+      <Section title="🚫 기피 식당 TOP 10" hint="다시 돌리기로 버려진 횟수 · 기피율=버림÷노출">
+        <TopRejected rejected={s.topRejected} />
       </Section>
 
       <Section title="🍽️ 카테고리 분포">

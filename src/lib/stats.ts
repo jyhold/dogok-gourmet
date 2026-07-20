@@ -2,9 +2,9 @@
 // 방문·룰렛·좋아요·지도클릭 이벤트를 구글 시트 stats 탭에 append하고, 읽어서 집계한다.
 // 쓰기는 statsSink.ts(서버), 읽기·집계는 여기. 순수 함수라 테스트 가능.
 
-export type StatEvent = 'visit' | 'spin' | 'like' | 'map';
+export type StatEvent = 'visit' | 'spin' | 'like' | 'map' | 'reject';
 
-export const STAT_EVENTS: StatEvent[] = ['visit', 'spin', 'like', 'map'];
+export const STAT_EVENTS: StatEvent[] = ['visit', 'spin', 'like', 'map', 'reject'];
 
 /** stats 탭 헤더 7열 (A~G, 시트 1행과 동일) */
 export const STATS_HEADER = ['ts', 'event', 'visitor', 'mode', 'place', 'category_sub', 'detail'];
@@ -116,13 +116,19 @@ export interface StatsSummary {
   likes: number;
   maps: number;
   respins: number;
+  /** '다시 돌리기'로 버려진 이벤트 수 (기피 신호) */
+  rejects: number;
   /** 좋아요 ÷ 룰렛 (0~1). 룰렛 0이면 0 */
   likeRate: number;
   mapRate: number;
   respinRate: number;
+  /** 버림 ÷ 룰렛 (0~1). 사용자가 결과를 얼마나 반려하는지 */
+  rejectRate: number;
   daily: { date: string; visitors: number; spins: number }[];
   byMode: Counted[];
   topPlaces: { key: string; count: number; likes: number }[];
+  /** 기피 식당 랭킹 — count=버려진 횟수, spins=노출(당첨) 횟수, rate=count/spins */
+  topRejected: { key: string; count: number; spins: number; rate: number }[];
   byCategory: Counted[];
   byPrice: Counted[];
   byDistance: Counted[];
@@ -149,6 +155,7 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
   const spins = rows.filter((r) => r.event === 'spin');
   const likes = rows.filter((r) => r.event === 'like');
   const maps = rows.filter((r) => r.event === 'map');
+  const rejects = rows.filter((r) => r.event === 'reject');
 
   // 방문자 = visitor distinct. visit 이벤트가 없더라도 다른 이벤트의 visitor는 방문한 것.
   const allVisitors = new Set(rows.map((r) => r.visitor).filter(Boolean));
@@ -181,6 +188,17 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
     .slice(0, 10)
     .map((p) => ({ ...p, likes: likeByPlace.get(p.key) ?? 0 }));
 
+  // 기피 식당 — '다시 돌리기'로 버려진 횟수. 노출(당첨) 대비 기피율을 함께 붙여
+  // '우연히 한 번 버려진 곳'과 '자주 떠도 자주 버려지는 지뢰'를 구분한다.
+  const spinByPlace = new Map<string, number>();
+  for (const s of spins) spinByPlace.set(s.place, (spinByPlace.get(s.place) ?? 0) + 1);
+  const topRejected = tally(rejects.map((r) => r.place))
+    .slice(0, 10)
+    .map((p) => {
+      const placeSpins = spinByPlace.get(p.key) ?? 0;
+      return { ...p, spins: placeSpins, rate: rate(p.count, placeSpins) };
+    });
+
   const lastTs = rows.map((r) => r.ts).sort().at(-1) ?? null;
 
   return {
@@ -191,12 +209,15 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
     likes: likes.length,
     maps: maps.length,
     respins,
+    rejects: rejects.length,
     likeRate: rate(likes.length, spins.length),
     mapRate: rate(maps.length, spins.length),
     respinRate: rate(respins, spins.length),
+    rejectRate: rate(rejects.length, spins.length),
     daily,
     byMode: tally(spins.map((s) => s.mode)),
     topPlaces,
+    topRejected,
     byCategory: tally(spins.map((s) => s.categorySub)),
     byPrice: tally(details.map((d) => d.price ?? '')),
     byDistance: tally(details.map((d) => d.dist ?? '')),
