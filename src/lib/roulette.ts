@@ -1,4 +1,5 @@
-import type { Candidate, PriceTier } from './types';
+import type { Candidate, DistanceMode, PriceTier } from './types';
+import { reachableInMode } from './geo';
 
 // ── 프론트 필터 + 가중치 추첨 (기획서 §7.2 step 3~4) ─────────
 
@@ -9,6 +10,12 @@ export interface FrontFilter {
   priceTier: PriceTier | null;
   /** 세션 내 이미 나온 후보 id */
   seenIds: string[];
+  /**
+   * 선택 이동수단(점심 전용). 지정하면 반경 밖 후보를 한 번 더 거른다.
+   * 서버가 이미 거르지만, 거리 변경 후 낡은 풀이 남는 경우를 대비한 방어선.
+   * 후식은 거리 필터가 없어 미지정(undefined).
+   */
+  distance?: DistanceMode;
 }
 
 /** 후보군에 프론트 필터 적용 */
@@ -19,6 +26,8 @@ export function applyFilters(candidates: Candidate[], f: FrontFilter): Candidate
     if (seen.has(c.id)) return false;
     if (excluded.has(c.categorySub)) return false;
     if (f.priceTier && c.priceTier !== f.priceTier) return false;
+    // 거리 재검증 방어선 — accessMode 있으면 등급, 없으면 직선거리 반경 컷(서버와 동일 규칙).
+    if (f.distance && !reachableInMode(c, f.distance)) return false;
     return true;
   });
 }

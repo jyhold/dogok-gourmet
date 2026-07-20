@@ -152,6 +152,27 @@ test('applyFilters: 제외/seen/예산', () => {
   const r = applyFilters(pool, { excludedSubs: ['고기구이'], priceTier: null, seenIds: ['a'] });
   assert.deepEqual(r.map((c) => c.id), ['c']);
 });
+test('applyFilters: 거리 방어선 — 도보 반경(1300m) 밖 curated 제외', () => {
+  // 낡은 bike 풀이 walk로 넘어온 상황 재현: 1.7km 후보(샐러픽 선릉점류)는 도보에서 빠져야 한다.
+  const near = { ...cand('near', '샐러드·포케'), distanceM: 800 };
+  const far = { ...cand('far', '샐러드·포케'), distanceM: 1700 };
+  const r = applyFilters([near, far], {
+    excludedSubs: [], priceTier: null, seenIds: [], distance: 'walk',
+  });
+  assert.deepEqual(r.map((c) => c.id), ['near']);
+  // 따릉이(2000m)로 바꾸면 둘 다 통과
+  const bike = applyFilters([near, far], {
+    excludedSubs: [], priceTier: null, seenIds: [], distance: 'bike',
+  });
+  assert.deepEqual(bike.map((c) => c.id), ['near', 'far']);
+});
+test('applyFilters: access_mode=도보면 거리 무관 통과 (관리자 지정 우선)', () => {
+  const far = { ...cand('far', '샐러드·포케'), distanceM: 1700, accessMode: 'walk' as const };
+  const r = applyFilters([far], {
+    excludedSubs: [], priceTier: null, seenIds: [], distance: 'walk',
+  });
+  assert.deepEqual(r.map((c) => c.id), ['far']);
+});
 test('weightedPick: 빈 배열 null', () => {
   assert.equal(weightedPick([]), null);
 });
