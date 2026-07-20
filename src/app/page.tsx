@@ -143,6 +143,13 @@ export default function Home() {
 
   // 필터 저장
   const updateFilter = (next: FilterState) => {
+    // 거리(이동수단)는 서버가 만드는 후보 '집합'을 바꾼다 — 반경·행정구역·access_mode·거리가중.
+    // 바뀌면 기존 풀을 버려 다음 spin이 새 반경으로 재fetch하게 한다(pickMode와 동일).
+    // 예산·제외메뉴·인증우선은 프론트(applyFilters/boost)에서 걸러 재fetch가 필요 없다.
+    if (next.distance !== filter.distance) {
+      setCandidates([]);
+      setSeenIds([]);
+    }
     setFilter(next);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(next));
@@ -220,9 +227,10 @@ export default function Home() {
       }
       setLoading(false);
 
-      // 예산 필터는 점심 전용. 후식은 미적용(null).
-      const priceTier =
-        mode === 'lunch-solo' || mode === 'lunch-group' ? filter.priceTier : null;
+      // 예산·거리 필터는 점심 전용. 후식은 미적용(null/undefined).
+      const isLunch = mode === 'lunch-solo' || mode === 'lunch-group';
+      const priceTier = isLunch ? filter.priceTier : null;
+      const distance = isLunch ? filter.distance : undefined;
       // 우선 부스트: 후식=추천(recommended), 그 외=방문(visited)
       const boost = (list: Candidate[]) =>
         mode === 'dessert'
@@ -232,6 +240,7 @@ export default function Home() {
       const available = applyFilters(pool, {
         excludedSubs: filter.excludedSubs,
         priceTier,
+        distance,
         seenIds: prevSeen,
       });
 
@@ -241,6 +250,7 @@ export default function Home() {
           const reset = applyFilters(pool, {
             excludedSubs: filter.excludedSubs,
             priceTier,
+            distance,
             seenIds: [],
           });
           if (reset.length > 0) {
