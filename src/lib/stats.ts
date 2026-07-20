@@ -1,10 +1,15 @@
 // ── 관리자 통계 (기획서 §11) ────────────────────────────────
-// 방문·룰렛·좋아요·지도클릭 이벤트를 구글 시트 stats 탭에 append하고, 읽어서 집계한다.
+// 방문·룰렛·신고·지도클릭·재추첨 이벤트를 구글 시트 stats 탭에 append하고, 읽어서 집계한다.
 // 쓰기는 statsSink.ts(서버), 읽기·집계는 여기. 순수 함수라 테스트 가능.
 
-export type StatEvent = 'visit' | 'spin' | 'like' | 'map' | 'reject';
+// 'like'는 폐지(→ 'report'로 대체)됐지만, 과거 시트 행 파싱이 깨지지 않게 타입·목록엔 남겨둔다.
+// 신규 집계·표시에서는 쓰지 않는다.
+export type StatEvent = 'visit' | 'spin' | 'like' | 'map' | 'reject' | 'report';
 
-export const STAT_EVENTS: StatEvent[] = ['visit', 'spin', 'like', 'map', 'reject'];
+export const STAT_EVENTS: StatEvent[] = ['visit', 'spin', 'like', 'map', 'reject', 'report'];
+
+/** 신고 사유 (detail의 reason=...). 폐점 / 점심 미영업 / 기타 */
+export type ReportReason = 'closed' | 'no_lunch' | 'other';
 
 /** stats 탭 헤더 7열 (A~G, 시트 1행과 동일) */
 export const STATS_HEADER = ['ts', 'event', 'visitor', 'mode', 'place', 'category_sub', 'detail'];
@@ -113,22 +118,23 @@ export interface StatsSummary {
   visitorsToday: number;
   visits: number;
   spins: number;
-  likes: number;
   maps: number;
   respins: number;
   /** '다시 돌리기'로 버려진 이벤트 수 (기피 신호) */
   rejects: number;
-  /** 좋아요 ÷ 룰렛 (0~1). 룰렛 0이면 0 */
-  likeRate: number;
+  /** 신고(폐점·점심영업X 등) 이벤트 수 */
+  reports: number;
   mapRate: number;
   respinRate: number;
   /** 버림 ÷ 룰렛 (0~1). 사용자가 결과를 얼마나 반려하는지 */
   rejectRate: number;
   daily: { date: string; visitors: number; spins: number }[];
   byMode: Counted[];
-  topPlaces: { key: string; count: number; likes: number }[];
+  topPlaces: { key: string; count: number }[];
   /** 기피 식당 랭킹 — count=버려진 횟수, spins=노출(당첨) 횟수, rate=count/spins */
   topRejected: { key: string; count: number; spins: number; rate: number }[];
+  /** 신고 TOP 매장 — count=총 신고, 사유별(폐점/점심X/기타) 분해. 수기 제외 판단용 */
+  topReported: { key: string; count: number; closed: number; noLunch: number; other: number }[];
   byCategory: Counted[];
   byPrice: Counted[];
   byDistance: Counted[];
@@ -153,9 +159,9 @@ const rate = (n: number, d: number) => (d > 0 ? n / d : 0);
 export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
   const visits = rows.filter((r) => r.event === 'visit');
   const spins = rows.filter((r) => r.event === 'spin');
-  const likes = rows.filter((r) => r.event === 'like');
   const maps = rows.filter((r) => r.event === 'map');
   const rejects = rows.filter((r) => r.event === 'reject');
+  const reports = rows.filter((r) => r.event === 'report');
 
   // 방문자 = visitor distinct. visit 이벤트가 없더라도 다른 이벤트의 visitor는 방문한 것.
   const allVisitors = new Set(rows.map((r) => r.visitor).filter(Boolean));
@@ -180,13 +186,7 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
   const details = spins.map((s) => parseDetail(s.detail));
   const respins = details.filter((d) => d.respin === '1').length;
 
-  // 가게별 좋아요 — 이름 기준 매칭 (id가 아니라 표시명으로 기록하므로)
-  const likeByPlace = new Map<string, number>();
-  for (const l of likes) likeByPlace.set(l.place, (likeByPlace.get(l.place) ?? 0) + 1);
-
-  const topPlaces = tally(spins.map((s) => s.place))
-    .slice(0, 10)
-    .map((p) => ({ ...p, likes: likeByPlace.get(p.key) ?? 0 }));
+  const topPlaces = tally(spins.map((s) => s.place)).slice(0, 10);
 
   // 기피 식당 — '다시 돌리기'로 버려진 횟수. 노출(당첨) 대비 기피율을 함께 붙여
   // '우연히 한 번 버려진 곳'과 '자주 떠도 자주 버려지는 지뢰'를 구분한다.
@@ -199,6 +199,24 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
       return { ...p, spins: placeSpins, rate: rate(p.count, placeSpins) };
     });
 
+  // 신고 TOP 매장 — 폐점·점심영업X 신고를 가게별로 집계 + 사유(reason) 분해.
+  // 관리자가 수기로 룰렛에서 제외할 문제 매장을 찾는 용도.
+  const reportReasons = new Map<string, { closed: number; noLunch: number; other: number }>();
+  for (const r of reports) {
+    const e = reportReasons.get(r.place) ?? { closed: 0, noLunch: 0, other: 0 };
+    const reason = parseDetail(r.detail).reason;
+    if (reason === 'closed') e.closed++;
+    else if (reason === 'no_lunch') e.noLunch++;
+    else e.other++; // 사유 없음·기타 모두 other로
+    reportReasons.set(r.place, e);
+  }
+  const topReported = tally(reports.map((r) => r.place))
+    .slice(0, 10)
+    .map((p) => ({
+      ...p,
+      ...(reportReasons.get(p.key) ?? { closed: 0, noLunch: 0, other: 0 }),
+    }));
+
   const lastTs = rows.map((r) => r.ts).sort().at(-1) ?? null;
 
   return {
@@ -206,11 +224,10 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
     visitorsToday: todayVisitors.size,
     visits: visits.length,
     spins: spins.length,
-    likes: likes.length,
     maps: maps.length,
     respins,
     rejects: rejects.length,
-    likeRate: rate(likes.length, spins.length),
+    reports: reports.length,
     mapRate: rate(maps.length, spins.length),
     respinRate: rate(respins, spins.length),
     rejectRate: rate(rejects.length, spins.length),
@@ -218,6 +235,7 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
     byMode: tally(spins.map((s) => s.mode)),
     topPlaces,
     topRejected,
+    topReported,
     byCategory: tally(spins.map((s) => s.categorySub)),
     byPrice: tally(details.map((d) => d.price ?? '')),
     byDistance: tally(details.map((d) => d.dist ?? '')),

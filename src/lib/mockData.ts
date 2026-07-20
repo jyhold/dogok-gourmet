@@ -492,14 +492,15 @@ function statRow(
   return { ts, event, visitor, mode, place, categorySub, detail };
 }
 
-// 3일치 · 방문자 5명 · 룰렛 10회(재추첨 3) · 좋아요 4 · 지도 3 · 버림(reject) 3
+// 3일치 · 방문자 5명 · 룰렛 10회(재추첨 3) · 신고 4 · 지도 3 · 버림(reject) 3
 // reject 행: '다시 돌리기' 누른 순간 화면에 떠 있던(=버려진) 식당. place=버려진 가게.
+// report 행: 결과 카드 '신고하기'. place=신고당한 가게, detail의 reason=폐점(closed)/점심X(no_lunch)/기타(other).
 // 재추첨 1회 = reject(옛 가게) + respin=1 spin(새 가게)이 짝을 이룬다.
 export const MOCK_STAT_ROWS: StatRow[] = [
   // — 1일차
   statRow('20260713-113002', 'visit', 'v-aaa'),
   statRow('20260713-113045', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=0;price=가성비;dist=walk;boost=1'),
-  statRow('20260713-113120', 'like', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
+  statRow('20260713-113120', 'report', 'v-aaa', 'lunch-group', '텐즈', '파스타·피자', 'reason=closed'),
   statRow('20260713-113135', 'map', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
   statRow('20260713-120010', 'visit', 'v-bbb'),
   statRow('20260713-120102', 'spin', 'v-bbb', 'lunch-group', '텐즈', '파스타·피자', 'respin=0;dist=walk;boost=0'),
@@ -510,19 +511,19 @@ export const MOCK_STAT_ROWS: StatRow[] = [
   statRow('20260714-114533', 'spin', 'v-aaa', 'lunch-solo', '행복한칼국수', '칼국수', 'respin=0;price=가성비;dist=walk;boost=1'),
   statRow('20260714-114605', 'reject', 'v-aaa', 'lunch-solo', '행복한칼국수', '칼국수'),
   statRow('20260714-114610', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=1;price=가성비;dist=walk;boost=1'),
-  statRow('20260714-114650', 'like', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
+  statRow('20260714-114650', 'report', 'v-aaa', 'lunch-group', '텐즈', '파스타·피자', 'reason=closed'),
   statRow('20260714-130205', 'visit', 'v-ccc'),
   statRow('20260714-130240', 'spin', 'v-ccc', 'dessert', '도곡 로스터스', '커피·음료', 'respin=0;boost=1'),
   statRow('20260714-130310', 'map', 'v-ccc', 'dessert', '도곡 로스터스', '커피·음료'),
   statRow('20260714-131500', 'visit', 'v-ddd'),
   statRow('20260714-131540', 'spin', 'v-ddd', 'dessert', '카페시트롱', '케이크·디저트', 'respin=0;boost=0'),
-  statRow('20260714-131600', 'like', 'v-ddd', 'dessert', '카페시트롱', '케이크·디저트'),
+  statRow('20260714-131600', 'report', 'v-ddd', 'dessert', '카페시트롱', '케이크·디저트', 'reason=no_lunch'),
   // — 3일차
   statRow('20260715-112000', 'visit', 'v-eee'),
   statRow('20260715-112040', 'spin', 'v-eee', 'lunch-group', '등촌샤브칼국수 도곡점', '샤브샤브', 'respin=0;price=보통;dist=bike;boost=0'),
   statRow('20260715-112115', 'reject', 'v-eee', 'lunch-group', '등촌샤브칼국수 도곡점', '샤브샤브'),
   statRow('20260715-112120', 'spin', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕', 'respin=1;price=보통;dist=bike;boost=0'),
-  statRow('20260715-112200', 'like', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),
+  statRow('20260715-112200', 'report', 'v-eee', 'lunch-group', '행복한칼국수', '칼국수', 'reason=other'),
   statRow('20260715-112215', 'map', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),
   statRow('20260715-114000', 'visit', 'v-aaa'),
   statRow('20260715-114030', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=0;price=가성비;dist=walk;boost=1'),

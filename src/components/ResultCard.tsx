@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import type { Candidate, Mode } from '@/lib/types';
 import { track } from '@/lib/clientTrack';
+import { formatDetail, type ReportReason } from '@/lib/stats';
 import DotIcon from './DotIcon';
+
+/** 신고 사유 버튼 정의 (라벨은 사용자 표시, value는 detail의 reason=) */
+const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: 'closed', label: '🚫 폐점' },
+  { value: 'no_lunch', label: '🕛 점심영업X' },
+  { value: 'other', label: '❓ 기타' },
+];
 
 interface Props {
   candidate: Candidate;
@@ -54,15 +62,21 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
   // priceNote(자유 텍스트, 예: '인당 1.5만')는 여기에 섞지 않는다(표기 통일).
   const priceText = c.priceTier;
 
-  // 좋아요 — 추천 결과 만족도(§11.5). 결과가 바뀌면 새 가게이므로 초기화.
-  const [liked, setLiked] = useState(false);
-  useEffect(() => setLiked(false), [c.id]);
+  // 신고 — 폐점/점심영업X 등 문제 매장 제보(§11.5). 결과가 바뀌면 새 가게이므로 초기화.
+  // reportOpen: 사유 버튼 펼침(= 탭 후 확인 단계). reported: 접수 완료.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reported, setReported] = useState(false);
+  useEffect(() => {
+    setReportOpen(false);
+    setReported(false);
+  }, [c.id]);
 
   const evt = { mode, place: c.name, categorySub: c.categorySub };
-  const like = () => {
-    if (liked) return; // 한 번만 집계 (연타로 부풀지 않게)
-    setLiked(true);
-    track('like', evt);
+  const submitReport = (reason: ReportReason) => {
+    if (reported) return; // 한 번만 집계 (연타로 부풀지 않게)
+    setReported(true);
+    setReportOpen(false);
+    track('report', { ...evt, detail: formatDetail({ reason }) });
   };
 
   return (
@@ -140,17 +154,33 @@ export default function ResultCard({ candidate: c, mode, onReroll, canReroll }: 
 
       <div className="row" style={{ marginTop: 12 }}>
         <button
-          className={`btn btn-like${liked ? ' liked' : ''}`}
-          onClick={like}
-          aria-pressed={liked}
-          title={liked ? '좋아요 완료' : '이 추천이 마음에 들면 눌러주세요'}
+          className={`btn btn-report${reported ? ' reported' : ''}`}
+          onClick={() => !reported && setReportOpen((v) => !v)}
+          aria-pressed={reportOpen}
+          disabled={reported}
+          title={reported ? '신고 접수됨' : '폐점·점심 미영업 등 문제가 있으면 신고해주세요'}
         >
-          {liked ? '💛 고마워요!' : '👍 좋아요'}
+          {reported ? '✅ 신고 접수됨' : '🚨 신고하기'}
         </button>
         <button className="btn btn-lg" style={{ flex: 1 }} onClick={onReroll} disabled={!canReroll}>
           🎰 다시 돌리기
         </button>
       </div>
+
+      {/* 사유 선택(= 확인 단계): 신고하기 탭 시 펼쳐지고, 사유를 골라야 접수된다 */}
+      {reportOpen && !reported && (
+        <div className="report-reasons">
+          <span className="report-reasons-label">어떤 문제인가요?</span>
+          <div className="report-reasons-btns">
+            {REPORT_REASONS.map((r) => (
+              <button key={r.value} className="btn btn-ghost btn-xs" onClick={() => submitReport(r.value)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!canReroll && <p className="hint">후보를 모두 봤어요! 필터를 바꿔보세요.</p>}
     </div>
   );

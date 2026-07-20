@@ -159,7 +159,7 @@ export function TopPlaces({ places }: { places: StatsSummary['topPlaces'] }) {
     <table className="stat-table top-places">
       <thead>
         <tr>
-          <th>#</th><th>가게</th><th>당첨</th><th>👍</th>
+          <th>#</th><th>가게</th><th>당첨</th>
         </tr>
       </thead>
       <tbody>
@@ -173,7 +173,41 @@ export function TopPlaces({ places }: { places: StatsSummary['topPlaces'] }) {
               </span>
             </td>
             <td>{p.count}</td>
-            <td>{p.likes > 0 ? p.likes : <span className="hint">-</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ── 신고 TOP 매장 (폐점·점심영업X 제보) ────────────────────
+// 사용자가 결과 카드에서 신고한 문제 매장. 사유(폐점/점심X/기타)를 분해해
+// 관리자가 룰렛에서 수기 제외할 대상을 고르게 한다. 경고색 tomato.
+export function TopReported({ reported }: { reported: StatsSummary['topReported'] }) {
+  if (reported.length === 0) return <p className="hint">아직 신고가 없어요</p>;
+  const peak = Math.max(...reported.map((p) => p.count), 1);
+  const num = (n: number) => (n > 0 ? n : <span className="hint">-</span>);
+  return (
+    <table className="stat-table top-places">
+      <thead>
+        <tr>
+          <th>#</th><th>가게</th><th>신고</th><th>폐점</th><th>점심X</th><th>기타</th>
+        </tr>
+      </thead>
+      <tbody>
+        {reported.map((p, i) => (
+          <tr key={p.key}>
+            <td className="rank">{i + 1}</td>
+            <td>
+              <span className="place-name">{p.key || '(이름 없음)'}</span>
+              <span className="mini-track">
+                <span className="mini-fill" style={{ width: `${(p.count / peak) * 100}%`, background: CHART.tomato }} />
+              </span>
+            </td>
+            <td>{p.count}</td>
+            <td>{num(p.closed)}</td>
+            <td>{num(p.noLunch)}</td>
+            <td>{num(p.other)}</td>
           </tr>
         ))}
       </tbody>

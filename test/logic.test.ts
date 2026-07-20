@@ -434,11 +434,11 @@ test('rowToStat: 불량 행은 null', () => {
 });
 test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
   const s = aggregate(MOCK_STAT_ROWS, '2026-07-15');
-  // mock: 방문자 5명(aaa,bbb,ccc,ddd,eee), 룰렛 10회, 재추첨 3, 좋아요 4, 지도 3
+  // mock: 방문자 5명(aaa,bbb,ccc,ddd,eee), 룰렛 10회, 재추첨 3, 신고 4, 지도 3
   assert.equal(s.visitors, 5);
   assert.equal(s.spins, 10);
   assert.equal(s.respins, 3);
-  assert.equal(s.likes, 4);
+  assert.equal(s.reports, 4);
   assert.equal(s.maps, 3);
   assert.equal(s.rejects, 3);
   // 3일차(오늘=2026-07-15) 방문자는 eee, aaa 둘
@@ -446,13 +446,20 @@ test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
   assert.equal(s.daily.length, 3);
   assert.equal(s.daily[0].date, '2026-07-13');
   // 비율
-  assert.equal(s.likeRate, 4 / 10);
   assert.equal(s.respinRate, 3 / 10);
   assert.equal(s.rejectRate, 3 / 10);
-  // 정닭곰탕이 3회로 최다 + 좋아요 2
+  // 정닭곰탕이 3회로 최다 (좋아요 열은 폐지)
   assert.equal(s.topPlaces[0].key, '정닭곰탕');
   assert.equal(s.topPlaces[0].count, 3);
-  assert.equal(s.topPlaces[0].likes, 2);
+  // 신고 TOP: 텐즈 2건(폐점2) > 카페시트롱 1(점심X) · 행복한칼국수 1(기타)
+  assert.equal(s.topReported[0].key, '텐즈');
+  assert.equal(s.topReported[0].count, 2);
+  assert.equal(s.topReported[0].closed, 2);
+  assert.equal(s.topReported[0].noLunch, 0);
+  const cafe = s.topReported.find((r) => r.key === '카페시트롱');
+  assert.equal(cafe?.noLunch, 1);
+  const kal = s.topReported.find((r) => r.key === '행복한칼국수');
+  assert.equal(kal?.other, 1);
   // 기피 식당 3곳(텐즈·행복한칼국수·등촌샤브칼국수), 각 1회 버림 / 노출 1회 → 기피율 100%
   assert.equal(s.topRejected.length, 3);
   const tenz = s.topRejected.find((r) => r.key === '텐즈');
@@ -465,11 +472,12 @@ test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
 test('aggregate: 빈 입력에도 안전 (0으로 나누기 금지)', () => {
   const s = aggregate([], '2026-07-15');
   assert.equal(s.spins, 0);
-  assert.equal(s.likeRate, 0);
   assert.equal(s.respinRate, 0);
   assert.equal(s.rejects, 0);
   assert.equal(s.rejectRate, 0);
+  assert.equal(s.reports, 0);
   assert.deepEqual(s.topRejected, []);
+  assert.deepEqual(s.topReported, []);
   assert.equal(s.lastEventAt, null);
   assert.deepEqual(s.daily, []);
 });
