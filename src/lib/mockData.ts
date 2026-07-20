@@ -492,7 +492,9 @@ function statRow(
   return { ts, event, visitor, mode, place, categorySub, detail };
 }
 
-// 3일치 · 방문자 5명 · 룰렛 10회(재추첨 3) · 좋아요 4 · 지도 3
+// 3일치 · 방문자 5명 · 룰렛 10회(재추첨 3) · 좋아요 4 · 지도 3 · 버림(reject) 3
+// reject 행: '다시 돌리기' 누른 순간 화면에 떠 있던(=버려진) 식당. place=버려진 가게.
+// 재추첨 1회 = reject(옛 가게) + respin=1 spin(새 가게)이 짝을 이룬다.
 export const MOCK_STAT_ROWS: StatRow[] = [
   // — 1일차
   statRow('20260713-113002', 'visit', 'v-aaa'),
@@ -501,10 +503,12 @@ export const MOCK_STAT_ROWS: StatRow[] = [
   statRow('20260713-113135', 'map', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
   statRow('20260713-120010', 'visit', 'v-bbb'),
   statRow('20260713-120102', 'spin', 'v-bbb', 'lunch-group', '텐즈', '파스타·피자', 'respin=0;dist=walk;boost=0'),
+  statRow('20260713-120135', 'reject', 'v-bbb', 'lunch-group', '텐즈', '파스타·피자'),
   statRow('20260713-120140', 'spin', 'v-bbb', 'lunch-group', '라드레쎄', '파스타·피자', 'respin=1;dist=walk;boost=0'),
   // — 2일차
   statRow('20260714-114500', 'visit', 'v-aaa'),
   statRow('20260714-114533', 'spin', 'v-aaa', 'lunch-solo', '행복한칼국수', '칼국수', 'respin=0;price=가성비;dist=walk;boost=1'),
+  statRow('20260714-114605', 'reject', 'v-aaa', 'lunch-solo', '행복한칼국수', '칼국수'),
   statRow('20260714-114610', 'spin', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕', 'respin=1;price=가성비;dist=walk;boost=1'),
   statRow('20260714-114650', 'like', 'v-aaa', 'lunch-solo', '정닭곰탕', '국밥·탕'),
   statRow('20260714-130205', 'visit', 'v-ccc'),
@@ -516,6 +520,7 @@ export const MOCK_STAT_ROWS: StatRow[] = [
   // — 3일차
   statRow('20260715-112000', 'visit', 'v-eee'),
   statRow('20260715-112040', 'spin', 'v-eee', 'lunch-group', '등촌샤브칼국수 도곡점', '샤브샤브', 'respin=0;price=보통;dist=bike;boost=0'),
+  statRow('20260715-112115', 'reject', 'v-eee', 'lunch-group', '등촌샤브칼국수 도곡점', '샤브샤브'),
   statRow('20260715-112120', 'spin', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕', 'respin=1;price=보통;dist=bike;boost=0'),
   statRow('20260715-112200', 'like', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),
   statRow('20260715-112215', 'map', 'v-eee', 'lunch-group', '평양면옥 도곡점', '냉면·갈비탕'),

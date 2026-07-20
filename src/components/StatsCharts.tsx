@@ -180,3 +180,36 @@ export function TopPlaces({ places }: { places: StatsSummary['topPlaces'] }) {
     </table>
   );
 }
+
+// ── 기피 식당 (다시 돌리기로 버려진 횟수) ──────────────────
+// 버림 횟수만으론 '많이 노출돼 많이 버려진 것'과 '적게 나왔는데 버려진 것'이 안 갈린다.
+// 노출(당첨) 대비 기피율을 함께 보여줘 수기 제외 판단을 돕는다. 경고 뉘앙스라 tomato.
+export function TopRejected({ rejected }: { rejected: StatsSummary['topRejected'] }) {
+  if (rejected.length === 0) return <p className="hint">아직 버려진 기록이 없어요</p>;
+  const peak = Math.max(...rejected.map((p) => p.count), 1);
+  return (
+    <table className="stat-table top-places">
+      <thead>
+        <tr>
+          <th>#</th><th>가게</th><th>버림</th><th>노출</th><th>기피율</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rejected.map((p, i) => (
+          <tr key={p.key}>
+            <td className="rank">{i + 1}</td>
+            <td>
+              <span className="place-name">{p.key || '(이름 없음)'}</span>
+              <span className="mini-track">
+                <span className="mini-fill" style={{ width: `${(p.count / peak) * 100}%`, background: CHART.tomato }} />
+              </span>
+            </td>
+            <td>{p.count}</td>
+            <td>{p.spins > 0 ? p.spins : <span className="hint">-</span>}</td>
+            <td>{p.spins > 0 ? pct(p.rate) : <span className="hint">-</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}

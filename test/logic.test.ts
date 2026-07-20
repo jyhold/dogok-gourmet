@@ -419,6 +419,7 @@ test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
   assert.equal(s.respins, 3);
   assert.equal(s.likes, 4);
   assert.equal(s.maps, 3);
+  assert.equal(s.rejects, 3);
   // 3일차(오늘=2026-07-15) 방문자는 eee, aaa 둘
   assert.equal(s.visitorsToday, 2);
   assert.equal(s.daily.length, 3);
@@ -426,10 +427,17 @@ test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
   // 비율
   assert.equal(s.likeRate, 4 / 10);
   assert.equal(s.respinRate, 3 / 10);
+  assert.equal(s.rejectRate, 3 / 10);
   // 정닭곰탕이 3회로 최다 + 좋아요 2
   assert.equal(s.topPlaces[0].key, '정닭곰탕');
   assert.equal(s.topPlaces[0].count, 3);
   assert.equal(s.topPlaces[0].likes, 2);
+  // 기피 식당 3곳(텐즈·행복한칼국수·등촌샤브칼국수), 각 1회 버림 / 노출 1회 → 기피율 100%
+  assert.equal(s.topRejected.length, 3);
+  const tenz = s.topRejected.find((r) => r.key === '텐즈');
+  assert.equal(tenz?.count, 1);
+  assert.equal(tenz?.spins, 1);
+  assert.equal(tenz?.rate, 1);
   // 모드 분포 합 = 룰렛 수
   assert.equal(s.byMode.reduce((a, b) => a + b.count, 0), 10);
 });
@@ -438,6 +446,9 @@ test('aggregate: 빈 입력에도 안전 (0으로 나누기 금지)', () => {
   assert.equal(s.spins, 0);
   assert.equal(s.likeRate, 0);
   assert.equal(s.respinRate, 0);
+  assert.equal(s.rejects, 0);
+  assert.equal(s.rejectRate, 0);
+  assert.deepEqual(s.topRejected, []);
   assert.equal(s.lastEventAt, null);
   assert.deepEqual(s.daily, []);
 });
