@@ -800,6 +800,27 @@ button {
   .bar-row { grid-template-columns: 78px 1fr 56px; }
 }
 
-/* ── 결과 카드 좋아요 버튼 (§11.4) ── */
-.btn-like { white-space: nowrap; }
-.btn-like.liked { background: var(--crown); border-color: var(--ink); }
+/* ── 결과 카드 신고 버튼 (§11.4) ── */
+.btn-report { white-space: nowrap; }
+.btn-report.reported { background: var(--crown); border-color: var(--ink); }
+
+/* 신고 사유 선택(= 확인 단계) */
+.report-reasons {
+  margin-top: 10px;
+  padding: 10px;
+  border: 2px dashed var(--ink);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+}
+.report-reasons-label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.report-reasons-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}

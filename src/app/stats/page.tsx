@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { StatsSummary } from '@/lib/stats';
-import { BarList, DailyChart, ModeChart, TopPlaces, TopRejected, pct } from '@/components/StatsCharts';
+import { BarList, DailyChart, ModeChart, TopPlaces, TopRejected, TopReported, pct } from '@/components/StatsCharts';
 import Mascot from '@/components/Mascot';
 
 // ── 관리자 통계 대시보드 (기획서 §11) ───────────────────────
@@ -176,7 +176,7 @@ export default function StatsPage() {
         <Kpi label="누적 방문자" value={s.visitors} unit="명" />
         <Kpi label="오늘 방문자" value={s.visitorsToday} unit="명" />
         <Kpi label="총 룰렛" value={s.spins} unit="회" />
-        <Kpi label="좋아요율" value={pct(s.likeRate)} sub={`${s.likes}/${s.spins}`} />
+        <Kpi label="누적 신고" value={s.reports} unit="건" />
         <Kpi label="지도 클릭율" value={pct(s.mapRate)} sub={`${s.maps}/${s.spins}`} />
         <Kpi label="재추첨률" value={pct(s.respinRate)} sub={`${s.respins}/${s.spins}`} />
         <Kpi label="기피율" value={pct(s.rejectRate)} sub={`${s.rejects}/${s.spins}`} />
@@ -190,8 +190,12 @@ export default function StatsPage() {
         <ModeChart byMode={s.byMode} />
       </Section>
 
-      <Section title="🏆 당첨 TOP 10" hint="👍는 그 가게에 눌린 좋아요 수">
+      <Section title="🏆 당첨 TOP 10">
         <TopPlaces places={s.topPlaces} />
+      </Section>
+
+      <Section title="🚨 신고 TOP 매장" hint="폐점·점심 미영업 신고 · 수기 제외 판단용">
+        <TopReported reported={s.topReported} />
       </Section>
 
       <Section title="🚫 기피 식당 TOP 10" hint="다시 돌리기로 버려진 횟수 · 기피율=버림÷노출">
