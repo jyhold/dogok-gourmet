@@ -15,11 +15,20 @@ export type PriceTier = '가성비' | '보통' | '플렉스' | '회식';
 /** 거리 필터 (이동수단) */
 export type DistanceMode = 'walk' | 'bike' | 'taxi';
 
-// 시작점(군인공제회관)으로부터 직선거리(하버사인) 반경 상한 (m)
+// ── 이동수단별 거리 밴드 (군인공제회관 직선거리, m) ──────────
+// access_mode가 없는 매장은 이 밴드로 '단 하나의 모드'에만 배정된다(서로 겹치지 않음).
+// distanceM은 Math.round된 정수라 700/701, 1500/1501 경계에 빈틈이 없다.
+export const DISTANCE_BANDS: Record<DistanceMode, { min: number; max: number }> = {
+  walk: { min: 0, max: 700 },
+  bike: { min: 701, max: 1500 },
+  taxi: { min: 1501, max: 3000 },
+};
+
+// 카카오 반경 검색 상한(m). 각 모드 밴드의 최댓값이면 그 밴드를 모두 덮는다.
 export const DISTANCE_METERS: Record<DistanceMode, number> = {
-  walk: 1300,
-  bike: 2000,
-  taxi: 5000,
+  walk: DISTANCE_BANDS.walk.max,
+  bike: DISTANCE_BANDS.bike.max,
+  taxi: DISTANCE_BANDS.taxi.max,
 };
 
 // 후식 모드 반경(직선거리, m). 소스별 차등 + 결과 부족 시 확장.

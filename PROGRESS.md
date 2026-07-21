@@ -1,5 +1,16 @@
 # 진행 상황 (세션 인수인계)
 
+## 🔧 v1.17 거리 모드 재정비 (2026-07-21) — access_mode 정확 일치 + 겹치지 않는 거리 밴드
+- **증상**: 거리 모드 필터가 어긋남. `access_mode=1`(도보) 매장이 따릉이·택시에서도 노출되고, 미지정 매장은 반경(1300/2000/5000)이 크게 겹쳐 모드를 바꿔도 결과가 거의 같았다.
+- **원인**: `geo.ts` `reachableInMode`가 access_mode를 **등급 이하(`≤`)** 로 판정(`MODE_LEVEL[accessMode] ≤ MODE_LEVEL[mode]`) → 도보 지정이 상위 모드에 전부 노출. 미지정은 겹치는 반경 상한 컷.
+- **수정 (요구사항 2우선순위 반영)**:
+  - **우선순위1** — access_mode 있으면 **정확히 그 모드에서만** 노출(`c.accessMode === mode`). 도보 지정은 따릉이·택시에 절대 안 뜸.
+  - **우선순위2** — access_mode 없으면 군인공제회관 직선거리로 **겹치지 않는 밴드** 배정: 도보 0~700 / 따릉이 701~1500 / 택시 1501~3000. 각 매장은 단 하나의 모드에만 노출.
+  - `types.ts` `DISTANCE_BANDS` 신설 + `DISTANCE_METERS`(카카오 검색 반경)를 밴드 최댓값(700/1500/3000)으로 축소. `geo.ts` `reachableInMode` 재작성, 미사용 `MODE_LEVEL`·`withinRadius` 제거.
+  - `candidates.ts` v1.15 확률 가중치(`applyDistanceMode`/`distancePrefWeight`/`accessModeWeight`/`ACCESS_MODE_MATCH_BOOST`/`DISTANCE_PREF_BOOST`) **폐지** — 밴드가 겹치지 않아 모드별 풀이 이미 갈리므로 불필요. `roulette.ts` `applyFilters`는 `reachableInMode` 재사용이라 자동 정합(프론트 방어선도 동일 규칙).
+  - 문서: `docs/plan.md`(병목5·거리필터 표·T열), `CLAUDE.md` §병목회피4 갱신.
+- 테스트: `reachableInMode` 우선순위1/2 + 경계값, `applyFilters` 밴드 분리, `buildCandidates` 모드별 노출 재작성(v1.15 가중치 테스트 3블록 제거). **npm test 55개 그린, tsc 그린.**
+
 ## 🐛 v1.12 버그픽스 (2026-07-14) — 동기화 중복 재추가 (`찌개의민족`)
 - **증상**: 이미 시트에 있는 매장이 매일 동기화에서 중복 제거되지 않고 하단에 재추가됨.
 - **원인**: 중복 판정이 `(이름 관련) AND (좌표 50m 이내)`를 모두 요구 → ① 시트/카카오 좌표가 50m만 어긋나도(수기 좌표·다른 지오코딩) 놓침, ② 좌표·카테고리 누락으로 파서(`rowToRestaurant`)에서 스킵된 행은 `loadRestaurants()` 비교 대상에서 빠져 매일 재추가.
