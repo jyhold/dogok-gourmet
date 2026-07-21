@@ -1,5 +1,12 @@
 # 진행 상황 (세션 인수인계)
 
+## 📊 v1.19 관리자 대시보드 지표 교체 (2026-07-21) — 당첨 TOP → 채택 TOP
+- **배경**: 좋아요(`like`) 폐지 후 자리를 잇던 **🏆 당첨 TOP 10**(`topPlaces`, 가장 많이 뽑힌 매장)이 가중치 랜덤이라 실제 선호를 못 나타냄.
+- **교체**: **👍 채택 TOP 매장**(`topAccepted`) — '네이버지도에서 보기'(`map` 이벤트) 클릭 = 실제 방문 의향. count=지도클릭, spins=당첨 노출, rate=채택률. 기피 식당 TOP(버림÷노출)의 긍정 대칭.
+- `stats.ts`: `StatsSummary.topPlaces` 제거→`topAccepted` 추가, `aggregate`에서 `maps`+`spinByPlace` 재사용해 산출. `StatsCharts.tsx`: `TopPlaces`→`TopAccepted`(채택/노출/채택률 3열, leaf 초록). `stats/page.tsx` 섹션 교체.
+- **수집 파이프라인 무변경** — `map` 이벤트가 이미 `place`를 실어 새 데이터 필요 없음. 집계·표시 계층만 수정.
+- 테스트: `aggregate`의 topPlaces 단언→topAccepted(정닭곰탕 노출3·채택률1/3, 도곡 로스터스 채택률1) + 빈 입력 단언. **npm test 55개 그린, tsc 그린.** 문서(CLAUDE.md·docs/stats-setup.md) 갱신.
+
 ## 🔧 v1.17 거리 모드 재정비 (2026-07-21) — access_mode 정확 일치 + 겹치지 않는 거리 밴드
 - **증상**: 거리 모드 필터가 어긋남. `access_mode=1`(도보) 매장이 따릉이·택시에서도 노출되고, 미지정 매장은 반경(1300/2000/5000)이 크게 겹쳐 모드를 바꿔도 결과가 거의 같았다.
 - **원인**: `geo.ts` `reachableInMode`가 access_mode를 **등급 이하(`≤`)** 로 판정(`MODE_LEVEL[accessMode] ≤ MODE_LEVEL[mode]`) → 도보 지정이 상위 모드에 전부 노출. 미지정은 겹치는 반경 상한 컷.
