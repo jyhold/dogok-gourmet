@@ -28,42 +28,12 @@ const LUNCH_MEAL = '점심' as const;
  */
 const SOLO_CURATED_BOOST = 2;
 
-// ── 이동수단 선택 반영 (v1.15) ────────────────────────────
-// 지금까지 거리 모드는 '반경 컷'일 뿐이라, 택시를 골라도 반경이 도보권을 통째로 포함해
-// 결국 코앞 가게만 나왔다. 선택을 확률에도 반영해 모드를 고른 의미가 생기게 한다.
-
-/** 관리자가 지정한 이동수단(access_mode)과 사용자가 고른 모드가 일치할 때 배수 */
-export const ACCESS_MODE_MATCH_BOOST = 3;
-
-/** 거리 선호 최대 배수 (선호 반대쪽 끝 = 1배) */
-export const DISTANCE_PREF_BOOST = 2;
-
-/**
- * 모드별 거리 선호 가중치. 반경 기준 상대값이라 반경을 바꿔도 그대로 동작한다.
- * - walk: 가까울수록 ↑ (0m=최대 → 반경=1배) — 걸어갈 거니까
- * - taxi: 멀수록 ↑ (0m=1배 → 반경=최대) — 택시를 골랐다면 멀리 갈 각오
- * - bike: 중립(1배) — 따릉이는 근/원 어느 쪽도 특별히 선호할 이유가 없다
- */
-export function distancePrefWeight(distM: number, mode: DistanceMode): number {
-  const radius = DISTANCE_METERS[mode];
-  const t = Math.min(1, Math.max(0, distM / Math.max(1, radius)));
-  if (mode === 'walk') return 1 + (DISTANCE_PREF_BOOST - 1) * (1 - t);
-  if (mode === 'taxi') return 1 + (DISTANCE_PREF_BOOST - 1) * t;
-  return 1;
-}
-
-/** access_mode가 선택 모드와 정확히 일치하면 부스트 (카카오 결과는 값이 없어 항상 1배) */
-export function accessModeWeight(c: Pick<Candidate, 'accessMode'>, mode: DistanceMode): number {
-  return c.accessMode === mode ? ACCESS_MODE_MATCH_BOOST : 1;
-}
-
-/** 이동수단 선택을 후보 가중치에 반영 (access_mode 일치 × 거리 선호) */
-function applyDistanceMode(list: Candidate[], mode: DistanceMode): Candidate[] {
-  return list.map((c) => ({
-    ...c,
-    weight: c.weight * accessModeWeight(c, mode) * distancePrefWeight(c.distanceM, mode),
-  }));
-}
+// ── 이동수단 선택 반영 (v1.17) ────────────────────────────
+// 거리 모드는 reachableInMode(geo.ts)로 노출 여부를 정한다:
+//  · access_mode 지정 매장 → 정확히 그 모드에서만 (우선순위1)
+//  · 미지정 매장 → 군인공제회관 직선거리 밴드로 단 하나의 모드에만 배정 (우선순위2)
+// 밴드가 서로 겹치지 않아 모드별로 후보 풀이 완전히 갈리므로, 예전 v1.15의
+// 반경 상대 거리 가중치(distancePrefWeight)·access_mode 일치 부스트는 불필요해 제거했다.
 
 /** meal_type 필드가 점심과 호환되는지 (둘다·점심 통과, 저녁 제외) */
 function lunchMealMatches(rMeal: Restaurant['mealType']): boolean {
@@ -186,10 +156,6 @@ export async function buildCandidates(
   const notEtc = (c: Candidate) => c.categoryMain !== '기타';
   kakaoCands = kakaoCands.filter(notEtc);
   curatedCands = curatedCands.filter(notEtc);
-
-  // 이동수단 선택을 확률에 반영 (곱셈이라 아래 모드별 부스트와 순서 무관)
-  kakaoCands = applyDistanceMode(kakaoCands, distance);
-  curatedCands = applyDistanceMode(curatedCands, distance);
 
   // ★ 카카오에서 관리자DB와 중복되는 매장을 먼저 제거 (DB우선, 병목 1).
   //   반드시 아래 solo_friendly 필터 '이전'에 전체 curated 기준으로 해야 한다.

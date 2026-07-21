@@ -1,5 +1,5 @@
 import type { Coords, DistanceMode } from './types';
-import { DISTANCE_METERS } from './types';
+import { DISTANCE_BANDS } from './types';
 
 // ── 고정 시작점: 도곡동 군인공제회관 (사내용이라 항상 여기서 시작, 위치인식 미사용) ──
 // 카카오 지오코딩 확정(2026-07): 서울 강남구 남부순환로 2806 (도곡동 467-13), 매봉·도곡역 사이.
@@ -55,25 +55,20 @@ export function inServiceArea(c: Coords): boolean {
   );
 }
 
-/** 거리 모드에 맞는 직선거리 반경(m) 내인지 */
-export function withinRadius(from: Coords, to: Coords, mode: DistanceMode): boolean {
-  return haversineMeters(from, to) <= DISTANCE_METERS[mode];
-}
-
-/** 이동수단 등급 (도보<따릉이<택시). 반경 중첩 구조와 정합 */
-export const MODE_LEVEL: Record<DistanceMode, number> = { walk: 1, bike: 2, taxi: 3 };
-
 /**
- * 선택 이동수단으로 이 후보에 접근 가능한지 (병목 5 오버라이드).
- * accessMode(관리자DB 지정)가 있으면 그 등급 기준으로 판정(직선거리 무시),
- * 없으면 기존 직선거리 반경 컷. `선택 등급 ≥ accessMode 등급`이면 노출.
+ * 선택 이동수단으로 이 후보를 노출할지 판정.
+ * - 우선순위1: accessMode(관리자DB 지정)가 있으면 '정확히 그 모드'에서만 노출(거리 무시).
+ *   예) accessMode=walk(도보) 매장은 따릉이·택시를 골라도 절대 안 뜬다.
+ * - 우선순위2: accessMode가 없으면 군인공제회관 직선거리로 모드별 밴드에 배정.
+ *   도보 0~700 / 따릉이 701~1500 / 택시 1501~3000 (서로 겹치지 않아 단 하나의 모드에만 속함).
  */
 export function reachableInMode(
   c: { distanceM: number; accessMode?: DistanceMode },
   mode: DistanceMode,
 ): boolean {
-  if (c.accessMode) return MODE_LEVEL[c.accessMode] <= MODE_LEVEL[mode];
-  return c.distanceM <= DISTANCE_METERS[mode];
+  if (c.accessMode) return c.accessMode === mode;
+  const band = DISTANCE_BANDS[mode];
+  return c.distanceM >= band.min && c.distanceM <= band.max;
 }
 
 /** 주소 문자열이 해당 거리 모드에서 허용된 행정구역인지 */
