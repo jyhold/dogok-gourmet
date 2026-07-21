@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { StatsSummary } from '@/lib/stats';
-import { BarList, DailyChart, ModeChart, TopPlaces, TopRejected, TopReported, pct } from '@/components/StatsCharts';
+import { BarList, DailyChart, ModeChart, TopAccepted, TopRejected, TopReported, pct } from '@/components/StatsCharts';
 import Mascot from '@/components/Mascot';
 
 // ── 관리자 통계 대시보드 (기획서 §11) ───────────────────────
@@ -190,8 +190,8 @@ export default function StatsPage() {
         <ModeChart byMode={s.byMode} />
       </Section>
 
-      <Section title="🏆 당첨 TOP 10">
-        <TopPlaces places={s.topPlaces} />
+      <Section title="👍 채택 TOP 매장" hint="지도클릭(가겠다)÷당첨 노출 · 기피 식당의 반대편">
+        <TopAccepted accepted={s.topAccepted} />
       </Section>
 
       <Section title="🚨 신고 TOP 매장" hint="폐점·점심 미영업 신고 · 수기 제외 판단용">

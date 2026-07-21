@@ -482,9 +482,16 @@ test('aggregate: mock 이벤트 집계가 손으로 센 값과 일치', () => {
   // 비율
   assert.equal(s.respinRate, 3 / 10);
   assert.equal(s.rejectRate, 3 / 10);
-  // 정닭곰탕이 3회로 최다 (좋아요 열은 폐지)
-  assert.equal(s.topPlaces[0].key, '정닭곰탕');
-  assert.equal(s.topPlaces[0].count, 3);
+  // 채택 TOP: 지도클릭(가겠다) 매장. 정닭곰탕(노출3)·도곡 로스터스(노출1)·평양면옥(노출1) 각 1클릭
+  assert.equal(s.topAccepted.length, 3);
+  const jd = s.topAccepted.find((p) => p.key === '정닭곰탕');
+  assert.equal(jd.count, 1); // 지도클릭 1
+  assert.equal(jd.spins, 3); // 당첨 노출 3
+  assert.equal(jd.rate, 1 / 3);
+  const ro = s.topAccepted.find((p) => p.key === '도곡 로스터스');
+  assert.equal(ro.count, 1);
+  assert.equal(ro.spins, 1);
+  assert.equal(ro.rate, 1);
   // 신고 TOP: 텐즈 2건(폐점2) > 카페시트롱 1(점심X) · 행복한칼국수 1(기타)
   assert.equal(s.topReported[0].key, '텐즈');
   assert.equal(s.topReported[0].count, 2);
@@ -510,6 +517,7 @@ test('aggregate: 빈 입력에도 안전 (0으로 나누기 금지)', () => {
   assert.equal(s.rejects, 0);
   assert.equal(s.rejectRate, 0);
   assert.equal(s.reports, 0);
+  assert.deepEqual(s.topAccepted, []);
   assert.deepEqual(s.topRejected, []);
   assert.deepEqual(s.topReported, []);
   assert.equal(s.lastEventAt, null);

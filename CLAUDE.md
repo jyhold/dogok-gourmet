@@ -35,7 +35,8 @@
 - `replace` 모드는 Apps Script에서 **candidates 전용**으로 막아둠(restaurants 실수 삭제 방지).
 
 ## 관리자 통계 (v1.13, `docs/stats-setup.md`)
-`/stats` — 페이지 내 비밀번호(`STATS_KEY`) 입력 후 방문자·룰렛·좋아요·지도클릭 통계. 저장소는 시트 `stats` 탭(7열), 쓰기는 기존 Apps Script 웹훅 재사용.
+`/stats` — 페이지 내 비밀번호(`STATS_KEY`) 입력 후 방문자·룰렛·채택·신고·기피 통계. 저장소는 시트 `stats` 탭(7열), 쓰기는 기존 Apps Script 웹훅 재사용.
+- **지표(v1.19)**: 구 '🏆 당첨 TOP'(가장 많이 뽑힌 매장)은 가중치 랜덤이라 무의미 → **'👍 채택 TOP 매장'**(지도클릭=`map`÷당첨 노출)으로 교체. 기피 식당 TOP(버림÷노출)의 긍정 대칭. 집계는 `stats.ts` `aggregate`의 `topAccepted`, 렌더 `StatsCharts.tsx` `TopAccepted`. 새 데이터 수집 불필요(`map` 이벤트에 이미 `place` 포함).
 - **⚠️ Apps Script는 모르는 탭을 restaurants로 조용히 폴백했었다** — `ALLOWED`에 `stats` 추가 + 폴백 제거가 선행 조건. `statsSink.ts`가 응답의 `sheet`를 검증해 다르면 영구 차단(관리자DB 오염 방지). `STATS_ENABLED=TRUE`로 이중 잠금.
 - `ts`는 `YYYYMMDD-HHmmss`(KST) — ISO로 쓰면 시트가 날짜 셀로 바꿔 되읽을 때 깨진다.
 - 수집은 프로덕션에서만 (로컬 dev 트래픽 제외). `USE_MOCK=TRUE`면 `MOCK_STAT_ROWS`로 대시보드 개발 가능.

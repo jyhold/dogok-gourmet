@@ -130,7 +130,8 @@ export interface StatsSummary {
   rejectRate: number;
   daily: { date: string; visitors: number; spins: number }[];
   byMode: Counted[];
-  topPlaces: { key: string; count: number }[];
+  /** 채택 TOP 매장 — count=지도클릭(가겠다) 횟수, spins=노출(당첨), rate=count/spins */
+  topAccepted: { key: string; count: number; spins: number; rate: number }[];
   /** 기피 식당 랭킹 — count=버려진 횟수, spins=노출(당첨) 횟수, rate=count/spins */
   topRejected: { key: string; count: number; spins: number; rate: number }[];
   /** 신고 TOP 매장 — count=총 신고, 사유별(폐점/점심X/기타) 분해. 수기 제외 판단용 */
@@ -186,13 +187,21 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
   const details = spins.map((s) => parseDetail(s.detail));
   const respins = details.filter((d) => d.respin === '1').length;
 
-  const topPlaces = tally(spins.map((s) => s.place)).slice(0, 10);
-
   // 기피 식당 — '다시 돌리기'로 버려진 횟수. 노출(당첨) 대비 기피율을 함께 붙여
   // '우연히 한 번 버려진 곳'과 '자주 떠도 자주 버려지는 지뢰'를 구분한다.
   const spinByPlace = new Map<string, number>();
   for (const s of spins) spinByPlace.set(s.place, (spinByPlace.get(s.place) ?? 0) + 1);
   const topRejected = tally(rejects.map((r) => r.place))
+    .slice(0, 10)
+    .map((p) => {
+      const placeSpins = spinByPlace.get(p.key) ?? 0;
+      return { ...p, spins: placeSpins, rate: rate(p.count, placeSpins) };
+    });
+
+  // 채택 TOP — 결과 카드의 '네이버지도에서 보기'(map)를 누른 = 실제로 가려는 긍정 신호.
+  // 기피 식당(버림÷노출)의 정확한 반대편. 노출(당첨) 대비 채택률을 함께 붙여
+  // '많이 떠서 많이 눌린 곳'과 '뜨면 자주 가는 곳'을 구분한다.
+  const topAccepted = tally(maps.map((m) => m.place))
     .slice(0, 10)
     .map((p) => {
       const placeSpins = spinByPlace.get(p.key) ?? 0;
@@ -233,7 +242,7 @@ export function aggregate(rows: StatRow[], todayKst: string): StatsSummary {
     rejectRate: rate(rejects.length, spins.length),
     daily,
     byMode: tally(spins.map((s) => s.mode)),
-    topPlaces,
+    topAccepted,
     topRejected,
     topReported,
     byCategory: tally(spins.map((s) => s.categorySub)),

@@ -152,18 +152,21 @@ export function ModeChart({ byMode }: { byMode: Counted[] }) {
   );
 }
 
-export function TopPlaces({ places }: { places: StatsSummary['topPlaces'] }) {
-  if (places.length === 0) return <p className="hint">아직 기록이 없어요</p>;
-  const peak = Math.max(...places.map((p) => p.count), 1);
+// ── 채택 TOP 매장 (지도클릭 = '가겠다' 신호) ────────────────
+// 결과 카드의 '네이버지도에서 보기'를 누른 = 실제로 방문하려는 긍정 신호.
+// 기피 식당(버림÷노출)의 반대편이라 노출 대비 채택률을 함께 보여준다. 긍정색 leaf(초록).
+export function TopAccepted({ accepted }: { accepted: StatsSummary['topAccepted'] }) {
+  if (accepted.length === 0) return <p className="hint">아직 채택(지도클릭) 기록이 없어요</p>;
+  const peak = Math.max(...accepted.map((p) => p.count), 1);
   return (
     <table className="stat-table top-places">
       <thead>
         <tr>
-          <th>#</th><th>가게</th><th>당첨</th>
+          <th>#</th><th>가게</th><th>채택</th><th>노출</th><th>채택률</th>
         </tr>
       </thead>
       <tbody>
-        {places.map((p, i) => (
+        {accepted.map((p, i) => (
           <tr key={p.key}>
             <td className="rank">{i + 1}</td>
             <td>
@@ -173,6 +176,8 @@ export function TopPlaces({ places }: { places: StatsSummary['topPlaces'] }) {
               </span>
             </td>
             <td>{p.count}</td>
+            <td>{p.spins > 0 ? p.spins : <span className="hint">-</span>}</td>
+            <td>{p.spins > 0 ? pct(p.rate) : <span className="hint">-</span>}</td>
           </tr>
         ))}
       </tbody>
