@@ -25,9 +25,9 @@ const PRICE_OPTIONS: { tier: PriceTier; label: string }[] = [
 ];
 
 const DIST_OPTIONS: { d: DistanceMode; label: string }[] = [
-  { d: 'walk', label: '🚶 도보 1.3km' },
-  { d: 'bike', label: '🚲 따릉이 2km' },
-  { d: 'taxi', label: '🚕 택시 5km' },
+  { d: 'walk', label: '🚶 도보 700m' },
+  { d: 'bike', label: '🚲 따릉이 1.5km' },
+  { d: 'taxi', label: '🚕 택시 3km' },
 ];
 
 export default function FilterPanel({ mode, value, onChange }: Props) {
