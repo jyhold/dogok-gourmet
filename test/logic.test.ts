@@ -38,6 +38,7 @@ import {
   STATS_HEADER,
 } from '../src/lib/stats.ts';
 import { MOCK_STAT_ROWS } from '../src/lib/mockData.ts';
+import { FOOD_QUOTES, pickQuote } from '../src/lib/quotes.ts';
 import type { Candidate } from '../src/lib/types.ts';
 
 // ── 카테고리 매핑 (병목 7) ──
@@ -571,4 +572,18 @@ test('passesGate: 평점을 못 받으면 통과시키지 않는다', () => {
   assert.equal(passesGate({ rating: null, reviews: null, miss: 'no-result' }, GATE), false);
   assert.equal(passesGate({ rating: null, reviews: null, miss: 'too-far' }, GATE), false);
   assert.equal(passesGate({ rating: null, reviews: 999 }, GATE), true); // 리뷰수는 받았다면 인정
+});
+
+// ── 미식 명언 풀 (메인 하단 마스코트) ──
+test('pickQuote: 항상 풀 안의 항목을 반환한다', () => {
+  // rng 경계값들 — 0, 중간, 1 직전, 정확히 1(오버런 방지)
+  for (const r of [0, 0.5, 0.999999, 1]) {
+    const q = pickQuote(() => r);
+    assert.ok(FOOD_QUOTES.includes(q), `rng=${r} 결과가 풀에 있어야 함`);
+    assert.ok(q.text.length > 0 && q.author.length > 0);
+  }
+});
+test('FOOD_QUOTES: 비어있지 않고 본문/저자 중복 없음', () => {
+  assert.ok(FOOD_QUOTES.length >= 10);
+  assert.equal(new Set(FOOD_QUOTES.map((q) => q.text)).size, FOOD_QUOTES.length);
 });

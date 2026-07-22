@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { Candidate, Mode, WeatherInfo } from '@/lib/types';
+import { pickQuote, type FoodQuote } from '@/lib/quotes';
 import ModeSelect from '@/components/ModeSelect';
 import FilterPanel, { type FilterState } from '@/components/FilterPanel';
 import SlotMachine from '@/components/SlotMachine';
@@ -112,11 +113,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   // 마운트 후에만 동적 씬(날씨·시각 기반) 렌더 → SSR 하이드레이션 불일치 방지
   const [mounted, setMounted] = useState(false);
+  // 미식 명언 — 로드/새로고침마다 마운트 후 랜덤 확정(SSR 불일치 방지)
+  const [quote, setQuote] = useState<FoodQuote | null>(null);
 
   // ── 초기화: 저장된 필터 복원 + 날씨 ──
   // 사내용이라 위치인식 미사용 — 항상 군인공제회관(고정 시작점) 기준.
   useEffect(() => {
     setMounted(true);
+    setQuote(pickQuote());
     trackVisitOnce();
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -311,6 +315,12 @@ export default function Home() {
                 </div>
               </div>
               <Mascot state={weather?.badWeather ? 'rain' : 'happy'} size={104} bounce />
+              {quote && (
+                <p className="food-quote">
+                  “{quote.text}”
+                  <span className="food-quote-author">— {quote.author}</span>
+                </p>
+              )}
             </div>
           )}
         </>
