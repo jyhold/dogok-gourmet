@@ -16,8 +16,13 @@ import { haversineMeters } from './geo';
 
 const ENDPOINT = 'https://places.googleapis.com/v1/places:searchText';
 
-/** 이 필드마스크가 SKU를 결정한다 — rating·userRatingCount 때문에 Enterprise로 과금된다 */
-const FIELD_MASK = 'places.displayName,places.location,places.rating,places.userRatingCount';
+/**
+ * 이 필드마스크가 SKU를 결정한다 — rating·userRatingCount 때문에 Enterprise로 과금된다.
+ * regularOpeningHours도 **같은 Enterprise 등급**이라 얹어도 비용·호출 수는 그대로다(공짜로 추가됨).
+ * (reviews 텍스트만 한 등급 위 Enterprise+Atmosphere라 쓰지 않는다.)
+ */
+const FIELD_MASK =
+  'places.displayName,places.location,places.rating,places.userRatingCount,places.regularOpeningHours';
 
 /** 이름이 같아도 이 거리보다 멀면 다른 가게로 본다 */
 const MATCH_DISTANCE_M = 120;
@@ -25,10 +30,41 @@ const MATCH_DISTANCE_M = 120;
 export interface PlaceRating {
   rating: number | null;
   reviews: number | null;
+  /**
+   * 평일(월~금) 중 가장 이른 오픈 시각(자정 기준 분). 예: 11:00 → 660, 12:00 → 720.
+   * 저녁 장사만 하는 곳(전부 17:00 오픈)을 점심 추천에서 거르는 데 쓴다.
+   * 구글이 영업시간을 안 주면(신규·소규모) null → 판정 안 함(기존 게이트만 적용).
+   */
+  weekdayOpenMinute?: number | null;
   /** 구글에서 매칭된 상호 (오매칭 점검용) */
   matchedName?: string;
   /** 매칭 실패 사유 */
   miss?: 'no-result' | 'too-far' | 'error';
+}
+
+/** 구글 regularOpeningHours.periods 한 점 (day 0=일 … 6=토) */
+interface OpenPoint {
+  day?: number;
+  hour?: number;
+  minute?: number;
+}
+
+/**
+ * 평일(1=월 … 5=금) 오픈 시각 중 **가장 이른 분**. 평일 데이터가 없으면 null.
+ * 저녁 장사만 하는 곳은 평일 오픈이 전부 오후라 값이 크게 나오고, 24시간·이른 오픈은 작게 나온다.
+ * 24시간 매장은 구글이 close 없는 단일 period(일요일 00:00)로 주므로 평일 값이 없어 null → 통과 처리된다(옳음).
+ */
+function earliestWeekdayOpenMinute(periods: { open?: OpenPoint }[] | undefined): number | null {
+  if (!periods || periods.length === 0) return null;
+  let min: number | null = null;
+  for (const p of periods) {
+    const o = p.open;
+    if (!o || o.day == null || o.hour == null) continue;
+    if (o.day < 1 || o.day > 5) continue; // 평일만 — 직장인 점심 앱이라 주말은 무시
+    const m = o.hour * 60 + (o.minute ?? 0);
+    if (min == null || m < min) min = m;
+  }
+  return min;
 }
 
 function key(): string | undefined {
@@ -75,6 +111,7 @@ export async function fetchRating(name: string, at: Coords): Promise<PlaceRating
         location?: { latitude: number; longitude: number };
         rating?: number;
         userRatingCount?: number;
+        regularOpeningHours?: { periods?: { open?: OpenPoint }[] };
       }[];
     };
     const places = j.places ?? [];
@@ -97,6 +134,7 @@ export async function fetchRating(name: string, at: Coords): Promise<PlaceRating
     return {
       rating: best.rating ?? null,
       reviews: best.userRatingCount ?? null,
+      weekdayOpenMinute: earliestWeekdayOpenMinute(best.regularOpeningHours?.periods),
       matchedName: best.displayName?.text,
     };
   } catch (err) {
@@ -115,6 +153,20 @@ export interface QualityGate {
   minRatingReviews: number;
   /** 지뢰 컷 — 이 평점 이하면 리뷰가 아무리 많아도 탈락 (많은 사람이 별로라고 한 곳) */
   badRating: number;
+  /**
+   * 점심 오픈 컷 — 평일 오픈이 이 시각(자정 기준 분)보다 늦으면 점심 부적합.
+   * 기본 720(=12:00). 저녁 장사만 하는 곳을 점심 룰렛에서 사전에 거른다.
+   */
+  lunchOpenBy: number;
+}
+
+/** "HH:MM"(예 "12:00") 또는 분 단위 숫자를 자정 기준 분으로. 파싱 실패 시 dflt. */
+function parseClockToMinutes(v: string | undefined, dflt: number): number {
+  if (!v) return dflt;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v.trim());
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  const n = Number(v);
+  return Number.isFinite(n) ? n : dflt;
 }
 
 export function qualityGate(): QualityGate {
@@ -123,6 +175,7 @@ export function qualityGate(): QualityGate {
     minReviews: Number(process.env.MIN_GOOGLE_REVIEWS ?? 200),
     minRatingReviews: Number(process.env.MIN_RATING_REVIEWS ?? 10),
     badRating: Number(process.env.BAD_GOOGLE_RATING ?? 3.0),
+    lunchOpenBy: parseClockToMinutes(process.env.LUNCH_OPEN_BY, 12 * 60),
   };
 }
 
@@ -142,4 +195,16 @@ export function passesGate(r: PlaceRating, gate: QualityGate = qualityGate()): b
     return true; // ③ 평점 좋고 + 리뷰 하한 충족
   }
   return false;
+}
+
+/**
+ * 점심에 부적합할 만큼 늦게 여는가 — 평일 오픈이 gate.lunchOpenBy(기본 12:00)보다 늦으면 true.
+ * **품질 게이트와 독립**이다: passesGate(맛집이냐)로 먼저 거른 뒤, 통과한 곳에만 이 컷을 적용해
+ * '좋은 집인데 점심엔 안 여는 곳'을 verdict=late로 따로 뽑아낸다.
+ * 영업시간을 못 받은 곳(weekdayOpenMinute=null)은 판정하지 않는다 → 통과(데이터 없다고 좋은 집을 버리지 않음).
+ * 정각 경계는 포함(12:00 오픈은 통과, 12:01부터 late).
+ */
+export function opensTooLate(r: PlaceRating, gate: QualityGate = qualityGate()): boolean {
+  if (r.weekdayOpenMinute == null) return false;
+  return r.weekdayOpenMinute > gate.lunchOpenBy;
 }

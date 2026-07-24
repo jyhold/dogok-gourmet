@@ -1,5 +1,15 @@
 # 진행 상황 (세션 인수인계)
 
+## 🕐 후보 검증에 점심 오픈 컷 추가 (2026-07-24) — 저녁 전문점 사전 제외
+- **배경**: 후보 검증(`verify-candidates.mts`)이 평점·리뷰만 봐서, 저녁 장사만 하는 좋은 집(예 오후 5시 오픈)도 승격돼 점심 룰렛에 섞였다.
+- **핵심 발견**: 구글 `regularOpeningHours`는 `rating`과 **같은 Enterprise SKU** → 필드마스크에 얹어도 **비용·호출 수 불변**(공짜로 영업시간 획득).
+- **구현**:
+  - `googlePlaces.ts`: `FIELD_MASK`에 `places.regularOpeningHours` 추가. `PlaceRating.weekdayOpenMinute`(평일 최이른 오픈, 자정 기준 분) 파싱. `QualityGate.lunchOpenBy`(env `LUNCH_OPEN_BY`, 기본 12:00·`HH:MM`/분 허용). `opensTooLate(r, gate)` 신설 — **품질 게이트와 독립**(passesGate로 맛집 거른 뒤 별도 적용).
+  - `candidatesSheet.ts`: `Verdict`에 `late` 추가. **컬럼 레이아웃(24열) 불변** — verdict(W열)에만 기록해 승격 로직 안전.
+  - `verify-candidates.mts`: verdict 판정 순서 miss→fail(품질)→late(오픈 컷)→pass. `late` 카운터·마크(🕐)·평일오픈 로그·게이트 안내 추가. **late/fail/miss 모두 값이 기록돼 재조회 안 됨**(비용 안전).
+- **결정(사용자)**: 컷=평일 **12:00** / 영업시간 **미제공은 통과**(데이터 공백으로 좋은 집 안 버림) / 24시간집 자동 통과.
+- 테스트: `opensTooLate` 3블록 추가(늦은 오픈 컷·경계 포함·데이터 없음 통과). **npm test 60개 그린, tsc 그린.** 문서(CLAUDE.md·docs/plan.md §12.4·docs/candidates-setup.md) 갱신.
+
 ## 📊 v1.19 관리자 대시보드 지표 교체 (2026-07-21) — 당첨 TOP → 채택 TOP
 - **배경**: 좋아요(`like`) 폐지 후 자리를 잇던 **🏆 당첨 TOP 10**(`topPlaces`, 가장 많이 뽑힌 매장)이 가중치 랜덤이라 실제 선호를 못 나타냄.
 - **교체**: **👍 채택 TOP 매장**(`topAccepted`) — '네이버지도에서 보기'(`map` 이벤트) 클릭 = 실제 방문 의향. count=지도클릭, spins=당첨 노출, rate=채택률. 기피 식당 TOP(버림÷노출)의 긍정 대칭.

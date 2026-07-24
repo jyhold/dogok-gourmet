@@ -26,7 +26,7 @@ import {
 } from '../src/lib/candidates.ts';
 import { isDuplicatePlace, normName, DUP_DISTANCE_M } from '../src/lib/syncDedupe.ts';
 import { scanAll } from '../src/lib/kakaoScan.ts';
-import { passesGate } from '../src/lib/googlePlaces.ts';
+import { passesGate, opensTooLate } from '../src/lib/googlePlaces.ts';
 import {
   aggregate,
   toKstStamp,
@@ -572,6 +572,24 @@ test('passesGate: 평점을 못 받으면 통과시키지 않는다', () => {
   assert.equal(passesGate({ rating: null, reviews: null, miss: 'no-result' }, GATE), false);
   assert.equal(passesGate({ rating: null, reviews: null, miss: 'too-far' }, GATE), false);
   assert.equal(passesGate({ rating: null, reviews: 999 }, GATE), true); // 리뷰수는 받았다면 인정
+});
+
+// ── 점심 오픈 컷 (저녁 장사만 하는 곳 거르기) ──
+const GATE_LUNCH = { ...GATE, lunchOpenBy: 12 * 60 }; // 12:00
+test('opensTooLate: 평일 오픈이 컷보다 늦으면 true', () => {
+  // 저녁 장사만 하는 곳 (17:00 오픈) → 점심 부적합
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300, weekdayOpenMinute: 17 * 60 }, GATE_LUNCH), true);
+  // 12:30 오픈 → 점심 피크 놓침
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300, weekdayOpenMinute: 12 * 60 + 30 }, GATE_LUNCH), true);
+});
+test('opensTooLate: 컷 정각·이전 오픈은 점심 적합(false)', () => {
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300, weekdayOpenMinute: 11 * 60 }, GATE_LUNCH), false);
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300, weekdayOpenMinute: 12 * 60 }, GATE_LUNCH), false); // 12:00 경계 포함
+});
+test('opensTooLate: 영업시간 데이터 없으면 판정 안 함(false)', () => {
+  // 사용자 결정 — 데이터 없다고 좋은 집을 버리지 않는다
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300, weekdayOpenMinute: null }, GATE_LUNCH), false);
+  assert.equal(opensTooLate({ rating: 4.5, reviews: 300 }, GATE_LUNCH), false); // 필드 자체가 없어도
 });
 
 // ── 미식 명언 풀 (메인 하단 마스코트) ──

@@ -26,7 +26,7 @@ import {
   toRestaurantRow,
   type Verdict,
 } from '../src/lib/candidatesSheet.ts';
-import { fetchRating, passesGate, qualityGate, googleEnabled } from '../src/lib/googlePlaces.ts';
+import { fetchRating, passesGate, opensTooLate, qualityGate, googleEnabled } from '../src/lib/googlePlaces.ts';
 import { loadRestaurants, loadRestaurantNames } from '../src/lib/sheet.ts';
 import { isDuplicatePlace, type KnownPlace } from '../src/lib/syncDedupe.ts';
 import { postRows, postRowsChunked } from '../src/lib/sheetWebhook.ts';
@@ -76,7 +76,9 @@ async function main() {
   console.log(`■ candidates ${rows.length}행 · 미검증 ${totalUnchecked}행`);
   if (Number.isFinite(MAX_DIST)) console.log(`   ${MAX_DIST}m 이내 미검증: ${unchecked.length}행`);
   console.log(`   이번 대상: ${target.length}건 (배치 ${BATCH})`);
+  const clock = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
   console.log(`   통과 기준: 리뷰 ≥ ${gate.minReviews}  또는  (평점 ≥ ${gate.minRating} 그리고 리뷰 ≥ ${gate.minRatingReviews}) · 단 평점 ≤ ${gate.badRating}이면 무조건 탈락`);
+  console.log(`   점심 컷: 평일 오픈이 ${clock(gate.lunchOpenBy)}보다 늦으면 late(점심 부적합, 승격 제외) · 영업시간 미제공은 통과`);
   console.log(`\n■ 비용 (구글 Text Search Enterprise $${PRICE_PER_1K}/1,000 · 무료 월 ${FREE_PER_MONTH}회)`);
   console.log(`   이번 실행: 최대 ${target.length}회 → 무료 한도 내면 $0, 전부 유료면 ${money((target.length / 1000) * PRICE_PER_1K)}`);
   console.log(`   남은 것 전부: ${unchecked.length}회 → 유료분 ${money((Math.max(0, unchecked.length - FREE_PER_MONTH) / 1000) * PRICE_PER_1K)}\n`);
@@ -91,13 +93,21 @@ async function main() {
   // ── 구글 조회 (순차 — 속도보다 쿼터·과금 통제가 중요) ──
   const now = toKstStamp(new Date());
   const patched = new Map<number, { raw: string[]; verdict: Verdict }>();
-  let pass = 0, fail = 0, miss = 0;
+  let pass = 0, fail = 0, late = 0, miss = 0;
 
   for (const [n, x] of target.entries()) {
     const g = await fetchRating(x.r.name, coordsOf(x.r));
-    const verdict: Verdict = g.miss ? 'miss' : passesGate(g, gate) ? 'pass' : 'fail';
+    // 순서: 매칭실패 → 품질(fail) → 점심 오픈 컷(late) → pass. late는 '맛집이지만 점심엔 안 여는 곳'
+    const verdict: Verdict = g.miss
+      ? 'miss'
+      : !passesGate(g, gate)
+        ? 'fail'
+        : opensTooLate(g, gate)
+          ? 'late'
+          : 'pass';
     if (verdict === 'pass') pass++;
     else if (verdict === 'fail') fail++;
+    else if (verdict === 'late') late++;
     else miss++;
 
     patched.set(x.i, {
@@ -105,11 +115,12 @@ async function main() {
       verdict,
     });
 
-    const mark = verdict === 'pass' ? '✅' : verdict === 'fail' ? '· ' : '❓';
+    const mark = verdict === 'pass' ? '✅' : verdict === 'late' ? '🕐' : verdict === 'fail' ? '· ' : '❓';
     const score = g.rating != null ? `★${g.rating} (리뷰 ${g.reviews ?? 0})` : `매칭실패(${g.miss})`;
-    console.log(`  ${String(n + 1).padStart(3)}/${target.length} ${mark} ${x.r.name.padEnd(22)} ${score}`);
+    const open = g.weekdayOpenMinute != null ? ` · 평일오픈 ${clock(g.weekdayOpenMinute)}` : '';
+    console.log(`  ${String(n + 1).padStart(3)}/${target.length} ${mark} ${x.r.name.padEnd(22)} ${score}${open}`);
   }
-  console.log(`\n■ 결과: pass ${pass} · fail ${fail} · miss ${miss}`);
+  console.log(`\n■ 결과: pass ${pass} · fail ${fail} · late ${late} · miss ${miss}`);
 
   // ── 승격: pass만 restaurants로. 직전에 중복 재확인 → 재실행해도 안전 ──
   const [parsed, allNames] = await Promise.all([loadRestaurants(), loadRestaurantNames()]);

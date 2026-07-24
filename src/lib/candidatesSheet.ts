@@ -10,9 +10,13 @@ const TAB = () => process.env.GOOGLE_CANDIDATES_SHEET_TAB ?? 'candidates';
 const COL = { name: 0, lat: 7, lng: 8, googleRating: 20, googleReviews: 21, verdict: 22, checkedAt: 23 };
 export const CANDIDATE_COLS = 24;
 
-/** verdict 상태 — 빈칸('')은 미검증 = 아직 비용이 나가지 않은 행 */
-export type Verdict = '' | 'pass' | 'fail' | 'miss' | 'promoted';
-const VERDICTS: Verdict[] = ['', 'pass', 'fail', 'miss', 'promoted'];
+/**
+ * verdict 상태 — 빈칸('')은 미검증 = 아직 비용이 나가지 않은 행.
+ * 'late' = 맛집 게이트는 통과했으나 평일 오픈이 점심 컷보다 늦어 점심 부적합(승격 안 함).
+ * 승격은 'pass'만. late/fail/miss도 값이 있으면 재조회 대상에서 빠져 비용이 두 번 안 든다.
+ */
+export type Verdict = '' | 'pass' | 'fail' | 'miss' | 'late' | 'promoted';
+const VERDICTS: Verdict[] = ['', 'pass', 'fail', 'miss', 'late', 'promoted'];
 
 export interface CandidateRow {
   /** 시트 원본 24열 — 검증 결과를 채워 그대로 되쓰기(replace) 위해 손실 없이 보관 */

@@ -591,8 +591,15 @@ Vercel Web Analytics는 무료로 방문자 수를 주지만 **vercel.com 대시
 
 ### 12.4 candidates 스키마 (24열)
 **A~T는 restaurants 20열과 완전히 동일** (승격 = 앞 20열 복사) + `google_rating`(U) /
-`google_reviews`(V) / `verdict`(W: 빈칸·pass·fail·miss·promoted) / `checked_at`(X).
+`google_reviews`(V) / `verdict`(W: 빈칸·pass·fail·late·miss·promoted) / `checked_at`(X).
 `checked_at`은 `stats.ts`의 `toKstStamp()` 재사용 — ISO로 쓰면 시트가 날짜 셀로 바꿔 깨진다(§11.3).
+
+**점심 오픈 컷(`verdict=late`)** — 품질 게이트(§12.5) 통과분에 한해, 구글 `regularOpeningHours`의
+**평일(월~금) 오픈 시각**이 `LUNCH_OPEN_BY`(기본 12:00)보다 늦으면 `late`로 기록하고 승격하지 않는다.
+저녁 장사만 하는 곳(전부 17:00 오픈)이 점심 룰렛에 들어오는 걸 사전에 막는 장치.
+`regularOpeningHours`는 평점과 **같은 Enterprise SKU**라 필드마스크에 얹어도 비용·호출 수가 늘지 않는다(§12.5).
+구글이 영업시간을 안 주면(신규·소규모) 판정하지 않고 통과 — 데이터 공백으로 좋은 집을 버리지 않는다.
+24시간집은 평일 period가 없어 자동 통과. 판정: `googlePlaces.ts` `opensTooLate`(품질 게이트와 독립).
 
 ### 12.5 구글 교차검증 — 비용 구조 (2026-07 확인)
 카카오 응답엔 평점·리뷰수 필드가 **아예 없다**(확인함). 구글은 있지만
@@ -606,7 +613,7 @@ Vercel Web Analytics는 무료로 방문자 수를 주지만 **vercel.com 대시
 **절대 규칙 3가지** — 안 지키면 월 $2,000이 나온다:
 1. **수동 실행 전용** (`scripts/verify-candidates.mts`), 배치 상한 필수
 2. **키는 `.env.local`에만.** Vercel엔 넣지 않는다 → 서버가 호출할 경로 자체를 없앤다
-3. **탈락분도 시트에 기록**(`verdict=fail`) → 재조회 안 함. 이게 없으면 매일 2,000건 재조회
+3. **탈락분도 시트에 기록**(`verdict=fail`/`late`/`miss`) → 재조회 안 함. 이게 없으면 매일 2,000건 재조회
 
 ### 12.6 조용한 폴백 2종 (이 프로젝트를 두 번 문 함정)
 - **Apps Script**: 모르는 탭 → 에러 대신 restaurants에 씀 → `ALLOWED` + 폴백 제거 + 응답 `sheet` 검증

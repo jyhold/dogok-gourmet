@@ -31,6 +31,7 @@
 - **candidates 24열: A~T가 restaurants와 동일**(승격=앞 20열 복사) + google_rating/google_reviews/verdict/checked_at. 순서 바꾸면 승격이 깨진다.
 - **구글 평점은 Text Search Enterprise($35/1000·무료 월 1000)** — 카카오엔 평점 필드가 없다. 비용 안전규칙: ①수동 스크립트만 ②키는 `.env.local`만(Vercel 금지) ③**탈락분도 verdict에 기록**해 재조회 금지.
 - 품질 게이트(`passesGate`): 리뷰≥200 **OR** (평점≥4.0 AND 리뷰≥10), 그리고 **평점≤3.0이면 무조건 탈락(지뢰컷)**. 리뷰 하한은 리뷰 1~2개짜리 ★5(표본 없음) 방지. env `MIN_GOOGLE_RATING`/`MIN_GOOGLE_REVIEWS`/`MIN_RATING_REVIEWS`/`BAD_GOOGLE_RATING`.
+- **점심 오픈 컷(`opensTooLate`)**: 품질 게이트 통과분에 한해, **평일(월~금) 오픈이 `LUNCH_OPEN_BY`(기본 12:00)보다 늦으면 verdict=`late`**(저녁 장사만 하는 곳 사전 제외, 승격 안 함). 구글 `regularOpeningHours`는 rating과 **같은 Enterprise SKU**라 필드마스크에 얹어도 비용·호출 수 불변(공짜). **영업시간 미제공은 판정 안 함(통과)** — 데이터 없다고 좋은 집을 버리지 않는다. 24시간집은 평일 period가 없어 자동 통과. verify 순서: miss→fail(품질)→late(오픈 컷)→pass.
 - **gviz는 없는 탭을 요청하면 200 + 첫 탭(restaurants) 내용을 준다** — `candidatesSheet.ts`가 헤더 W열=`verdict`로 검증. Apps Script 폴백과 같은 부류의 함정.
 - `replace` 모드는 Apps Script에서 **candidates 전용**으로 막아둠(restaurants 실수 삭제 방지).
 
